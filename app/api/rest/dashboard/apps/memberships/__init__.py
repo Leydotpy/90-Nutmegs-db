@@ -1,0 +1,1 @@
+default_app_config = 'api.rest.dashboard.apps.memberships.apps.MembershipDashboardConfig'

@@ -1,0 +1,920 @@
+You are working on the **SANFootball backend repository**.
+
+The repository contains an authoritative root `AGENTS.md` that defines the complete architectural consolidation, refactoring, modernisation, infrastructure, feature-expansion, migration, testing, security, observability, documentation, and production-readiness requirements for this project.
+
+Your task is to **execute that specification against the actual repository**, not merely analyse it or describe how it could be implemented.
+
+## Governing Authority
+
+Treat the root `AGENTS.md` as the primary implementation contract for this work.
+
+Read it **completely from beginning to end before making substantive code changes**.
+
+Also locate and read any additional `AGENTS.md` files that apply to directories you modify. More-specific repository instructions may supplement the root specification where appropriate, but do not allow older or legacy implementation patterns to override the canonical architecture established by the root specification.
+
+Do not rely on assumptions about what the repository contains.
+
+The actual local repository is the implementation baseline.
+
+Do not assume that the remote Git repository represents the current state of the project. Work from and inspect the files in the current workspace.
+
+---
+
+# PRIMARY OBJECTIVE
+
+Transform the existing SANFootball backend incrementally into the coherent, canonical, production-grade architecture specified by `AGENTS.md`.
+
+This is an **implementation assignment**.
+
+Do not stop after producing:
+
+* an architecture assessment;
+* a gap analysis;
+* recommendations;
+* a migration proposal;
+* a TODO list;
+* a refactoring plan; or
+* descriptions of code that should eventually be written.
+
+Those artefacts may be created where required by `AGENTS.md`, but they are preparatory work.
+
+After completing the required repository characterization, **proceed with the actual implementation**.
+
+Follow the governing workflow:
+
+```text
+inspect
+→ characterize
+→ design
+→ implement
+→ migrate
+→ test
+→ document
+→ observe
+→ remove superseded code
+→ report exact result
+```
+
+---
+
+# 1. BEGIN WITH MASTER PHASE 0
+
+Do not begin by adding whichever new feature appears easiest.
+
+Start with the **Master Phase 0 — Repository Baseline and Characterization** requirements in `AGENTS.md`.
+
+Before making architectural changes:
+
+1. Read the complete root `AGENTS.md`.
+2. Locate and read applicable parent/child `AGENTS.md` files.
+3. Inspect the complete repository tree.
+4. Inspect `git status`.
+5. Identify the current branch.
+6. Identify modified, staged, unstaged, ignored where relevant, and untracked files.
+7. Preserve all legitimate existing user changes.
+8. Never reset, overwrite, discard, or silently rewrite unrelated user modifications.
+9. Inspect repository documentation.
+10. Inspect dependency and packaging configuration.
+11. Inspect Django settings and environment-selection mechanisms.
+12. Inspect every registered Django application.
+13. Inspect models and relationships.
+14. Inspect all existing migrations.
+15. Inspect public, private, administrative, creator-facing, and internal API routes.
+16. Inspect serializers, views, services, selectors, policies, managers, repositories, signals, middleware, authentication, permissions, and throttling.
+17. Inspect Celery tasks, schedules, queues, retry behaviour, and background-processing infrastructure.
+18. Inspect domain/internal events and signal-based side effects.
+19. Inspect current storage and media architecture.
+20. Inspect authentication and Clerk integration.
+21. Inspect membership, subscription, plan, price, billing, entitlement, and access-control implementations.
+22. Inspect podcasts, episodes, seasons, media, transcripts, chapters, and summaries.
+23. Inspect playback progress, queues, playlists, bookmarks, history, and downloads.
+24. Inspect sports/football models and metadata.
+25. Inspect recommendations, discovery, search, and editorial functionality.
+26. Inspect comments, reactions, forums/discussions, polls, moderation, and other community functionality.
+27. Inspect analytics and event tracking.
+28. Inspect creator/network/team ownership functionality if already present.
+29. Inspect existing Cloudflare/R2/Images/Stream integrations.
+30. Inspect tests and existing test infrastructure.
+31. Inspect CI/CD.
+32. Inspect deployment/container/IaC configuration.
+33. Inspect observability, logging, metrics, tracing, health checks, and alerting.
+34. Inspect backup, restore, retention, lifecycle, and disaster-recovery assumptions.
+35. Identify committed-secret or insecure-configuration risks.
+36. Identify duplicate generations of the same business capability.
+37. Identify legacy, transitional, canonical, partially implemented, and missing systems.
+38. Trace the important callers of legacy systems before replacing them.
+
+Pay particular attention to the legacy/canonical areas explicitly identified by `AGENTS.md`, including where present:
+
+* `core.application`;
+* `core.loading`;
+* Oscar-derived mechanisms;
+* membership/access implementations;
+* plan/subscription/entitlement implementations;
+* queue implementations;
+* playback state;
+* legacy and current recommendation systems;
+* offline media/DRM;
+* billing/card code;
+* forum/comments;
+* promotions/editorial systems;
+* storage/provider integrations;
+* duplicated API generations.
+
+Do not infer that a component is dead merely because its name appears legacy.
+
+Trace its callers first.
+
+---
+
+# 2. ESTABLISH THE IMPLEMENTATION BASELINE
+
+Run the safest practical baseline checks before refactoring.
+
+At minimum, inspect and where possible run the project's existing equivalents of:
+
+```text
+Django system checks
+test suite
+linting
+format checks
+type checks
+migration consistency checks
+OpenAPI/schema generation
+dependency/security checks
+```
+
+Do not automatically treat every baseline failure as caused by your work.
+
+Separate:
+
+```text
+pre-existing failure
+```
+
+from:
+
+```text
+regression introduced by this implementation
+```
+
+Record the distinction.
+
+Where existing behaviour is risky but important and insufficiently tested, create **characterization tests before changing it**.
+
+Particularly prioritize characterization around:
+
+* identity;
+* access control;
+* subscriptions;
+* entitlements;
+* billing/webhooks;
+* queues;
+* playback progress;
+* protected media;
+* media processing;
+* recommendations;
+* public API compatibility;
+* existing data migrations.
+
+---
+
+# 3. CREATE OR UPDATE THE REQUIRED IMPLEMENTATION DOCUMENTS
+
+Create missing required documents and update existing ones instead of duplicating them.
+
+At minimum, ensure the repository has and continuously maintains:
+
+```text
+SANFOOTBALL_IMPLEMENTATION_STATUS.md
+docs/architecture-current.md
+docs/refactor-plan.md
+```
+
+Do not create competing implementation-status documents.
+
+`SANFOOTBALL_IMPLEMENTATION_STATUS.md` is the repository-wide source of truth for implementation progress.
+
+Populate it with the baseline discovered from the actual repository and maintain the sections required by `AGENTS.md`, including:
+
+* Current Master Phase
+* Current Subphase
+* Baseline / Inventory
+* Completed
+* Verified Existing Implementations
+* In Progress
+* Deferred
+* Blocked
+* Legacy Components Remaining
+* Data Migrations
+* Backfills
+* Compatibility Routes / Contracts
+* Canonical Owners Established
+* Infrastructure Decisions
+* Hosting / Deployment Status
+* Media Storage / CDN Status
+* Database / Cache / Broker Status
+* Queue / Worker Capacity Status
+* Backup / Restore / DR Status
+* Observability / Alerts Status
+* IaC / CI/CD Status
+* Security / Privacy Risks
+* Cost / Capacity Risks
+* Tests / Quality Gates
+* ADRs
+* Known Risks
+* Next Actions
+
+Update this document **throughout the work**, not merely when the entire project is finished.
+
+`docs/architecture-current.md` must describe what actually exists before substantial refactoring.
+
+`docs/refactor-plan.md` must map the observed repository to the target architecture and establish a safe dependency-ordered migration sequence.
+
+Do not invent architecture in these documents that the repository does not currently have.
+
+---
+
+# 4. MAP CANONICAL OWNERSHIP BEFORE REFACTORING
+
+For every major concept discovered, determine:
+
+```text
+current implementation(s)
+→ existing callers
+→ existing stored data
+→ public contracts
+→ intended canonical owner
+→ migration requirements
+→ compatibility requirements
+→ superseded implementation
+```
+
+The central architectural rule is:
+
+```text
+ONE CONCEPT → ONE AUTHORITATIVE MUTABLE SOURCE OF TRUTH
+```
+
+Do not solve legacy duplication by building another implementation beside it.
+
+In particular, carefully establish canonical ownership for:
+
+* identity;
+* podcasts;
+* seasons;
+* episodes;
+* media;
+* transcripts;
+* summaries;
+* chapters;
+* sports entities;
+* playback progress;
+* queues;
+* playlists;
+* bookmarks;
+* follows;
+* plans;
+* prices;
+* subscriptions;
+* memberships;
+* entitlements;
+* access decisions;
+* billing;
+* comments;
+* reactions;
+* moderation;
+* recommendations;
+* editorial rails;
+* analytics events;
+* creator/network ownership;
+* clips;
+* live broadcasting;
+* provider media locations.
+
+If an implementation already satisfies the governing specification, **verify it and preserve it**.
+
+Do not rewrite correct code merely to make it stylistically different.
+
+If something is partially compliant, complete its canonicalisation safely.
+
+If multiple implementations exist, determine which should survive, migrate callers/data, verify the replacement, and only then remove the superseded implementation.
+
+---
+
+# 5. PROCEED INTO MASTER PHASE 1 AFTER CHARACTERIZATION
+
+Once Master Phase 0 has produced a reliable baseline, **continue into Master Phase 1 rather than stopping for another instruction** unless an external dependency genuinely makes further safe implementation impossible.
+
+Execute the Part I canonicalisation/refactoring programme in dependency order.
+
+Do not attempt a giant destructive rewrite.
+
+Use:
+
+```text
+expand
+→ backfill
+→ switch
+→ verify
+→ contract
+```
+
+for valuable persisted data and public contracts.
+
+Preserve:
+
+* user data;
+* stable public identifiers where practical;
+* externally consumed contracts where compatibility is required;
+* migration history;
+* operational behaviour that remains valid.
+
+Compatibility code is allowed as a **temporary migration mechanism**.
+
+It is not permission to retain permanent duplicate architectures.
+
+---
+
+# 6. APPLY PRODUCTION INFRASTRUCTURE RULES FROM THE BEGINNING
+
+Although feature implementation occurs in later phases, the production constraints in Part II apply to architectural decisions made during the refactor.
+
+Do not introduce new designs that depend on:
+
+* durable local production disk;
+* Django transporting large media bytes in ordinary playback paths;
+* unbounded worker queues;
+* unbounded database connections;
+* web workers performing heavyweight media/AI work;
+* provider-specific business logic scattered through domains;
+* permanent private object URLs;
+* undocumented infrastructure;
+* unobservable background jobs.
+
+The resulting architecture must support:
+
+* stateless horizontally scalable web compute;
+* independently scalable workers;
+* direct large-media upload;
+* CDN/edge media delivery;
+* bounded connection pools;
+* queue isolation and backpressure;
+* retry-safe/idempotent asynchronous processing;
+* provider adapters;
+* CI/CD;
+* IaC where required;
+* backup and restore;
+* disaster recovery;
+* structured observability;
+* least-privilege secrets;
+* cost/capacity visibility.
+
+---
+
+# 7. CLOUDFLARE / PYCFLARE REQUIREMENT
+
+Follow the Cloudflare boundary defined by `AGENTS.md`.
+
+The current production media provider architecture is:
+
+```text
+Cloudflare R2
+    → audio
+    → arbitrary binary objects
+    → source media
+    → captions/waveforms/general objects
+
+Cloudflare Images
+    → artwork
+    → photographs
+    → image variants
+    → private/gated images
+
+Cloudflare Stream
+    → video podcast ingest
+    → video processing/encoding
+    → adaptive playback
+    → private video
+```
+
+Python-side Cloudflare integration must use the project's required `pycflare` package and SANFootball's provider-adapter boundaries.
+
+Do **not** introduce parallel:
+
+* raw Cloudflare REST implementations;
+* direct `boto3` implementations for R2 where `pycflare` supplies the required capability;
+* another unrelated Cloudflare SDK;
+* Cloudflare-specific calls scattered through domain services.
+
+Keep domain ownership provider-neutral even though the concrete production implementation currently uses Cloudflare.
+
+Protected media must use short-lived authorization/capabilities rather than permanent private URLs.
+
+Never log provider credentials, upload capabilities, signing secrets, API tokens, R2 credentials, Stream secrets, or Images signing material.
+
+---
+
+# 8. DOMAIN DESIGN RULES
+
+Maintain clear domain boundaries.
+
+Prefer the governing dependency pattern established in `AGENTS.md`.
+
+Domain logic must not depend on presentation logic.
+
+Prefer:
+
+```text
+API / View
+    ↓
+Service / Policy / Selector
+    ↓
+Domain Models
+```
+
+Avoid:
+
+```text
+Domain Service → DRF Serializer
+Domain Model → API View
+Recommendation Domain → REST Serializer
+```
+
+Use:
+
+* models for state and local invariants;
+* selectors for reusable read/query composition;
+* services for transactional use cases/state transitions;
+* policies for authorization/business decisions;
+* tasks for asynchronous orchestration;
+* API modules for HTTP/presentation concerns.
+
+Do not mechanically create layers that provide no value.
+
+---
+
+# 9. CRITICAL STATE TRANSITIONS
+
+Critical state transitions must be explicit, transactional, testable, and observable.
+
+Do not hide important business operations inside arbitrary signals or model `save()` methods.
+
+Examples include:
+
+* subscription activation;
+* subscription cancellation;
+* entitlement grant/revocation;
+* billing webhook handling;
+* queue creation/reordering/merging;
+* protected download authorization;
+* protected media access;
+* media lifecycle transitions;
+* creator ownership/permission changes;
+* live broadcast lifecycle where implemented.
+
+Signals may support secondary concerns such as:
+
+* cache invalidation;
+* metrics;
+* safe non-critical reactions.
+
+Do not make them the only execution path for financially or operationally critical behaviour.
+
+---
+
+# 10. DATABASE AND CONCURRENCY
+
+Move durable invariants into PostgreSQL where appropriate.
+
+Use deliberately:
+
+* foreign keys;
+* unique constraints;
+* check constraints;
+* conditional constraints;
+* indexes;
+* transactions;
+* row locking such as `select_for_update()` when necessary.
+
+Analyse concurrency for every mutable ordered/shared state.
+
+Do not rely solely on application-level checks when invalid state can be prevented by the database.
+
+High-traffic read paths must avoid N+1 query patterns and unbounded collections.
+
+Use appropriate:
+
+* `select_related`;
+* `prefetch_related`;
+* `Prefetch`;
+* annotations;
+* aggregates;
+* pagination;
+* query-count tests.
+
+Do not add speculative indexes without evidence from actual query patterns.
+
+---
+
+# 11. ASYNC AND CELERY RULES
+
+Heavy work belongs outside normal request paths.
+
+Use background workers appropriately for:
+
+* media processing;
+* transcription;
+* summaries;
+* recommendations;
+* search indexing where required;
+* notifications;
+* analytics aggregation;
+* webhook follow-up;
+* cleanup;
+* AI/ML processing.
+
+Tasks must be:
+
+* bounded;
+* retry-safe where retrying is possible;
+* idempotent where duplicate delivery is normal;
+* observable;
+* structured in logging;
+* explicit about failure;
+* conscious of memory use;
+* conscious of transaction boundaries.
+
+Separate worker queues where workload characteristics justify it.
+
+Media/transcription/ML workloads must not starve ordinary operational or billing tasks.
+
+Do not perform ML model training at Django import/startup time.
+
+---
+
+# 12. SECURITY IS PART OF IMPLEMENTATION
+
+Do not defer security until the end.
+
+Continuously enforce:
+
+* server-side authorization;
+* canonical `AccessPolicy`;
+* protected-media authorization at delivery time;
+* webhook signature verification;
+* webhook idempotency/replay protection;
+* secure secrets handling;
+* rate limits;
+* upload validation;
+* SSRF protections;
+* safe FFmpeg/subprocess invocation;
+* logging redaction;
+* dependency auditing;
+* least privilege.
+
+Authentication determines identity.
+
+It does **not** replace SANFootball domain authorization.
+
+Do not trust frontend/client claims to grant premium access.
+
+---
+
+# 13. MIGRATIONS MUST BE SAFE
+
+Never destructively replace high-value persisted data in one step merely for architectural cleanliness.
+
+For each substantial migration:
+
+1. determine the existing data shape;
+2. determine target shape;
+3. make schema expansion backward-compatible where needed;
+4. write migration/backfill logic;
+5. make it restartable or reconciliation-friendly where practical;
+6. validate migrated data;
+7. migrate internal callers;
+8. migrate external/public contracts where applicable;
+9. maintain intentional compatibility during transition;
+10. verify the replacement;
+11. contract/remove legacy structures only when safe.
+
+Record migrations and backfills in `SANFOOTBALL_IMPLEMENTATION_STATUS.md`.
+
+Add migration tests for high-risk transformations.
+
+---
+
+# 14. TEST EVERY LAYER
+
+Do not consider a feature/refactor complete merely because the application starts.
+
+Add or update tests appropriate to each change.
+
+Depending on the area, cover:
+
+* happy paths;
+* validation failures;
+* authorization denial;
+* retry/duplicate delivery;
+* idempotency;
+* concurrency;
+* migrations;
+* backwards compatibility;
+* API contracts;
+* query counts;
+* background tasks;
+* cache failure;
+* provider failure;
+* partial failure;
+* access-control matrices;
+* webhook replay;
+* media authorization.
+
+Run focused tests during implementation and the broader applicable quality gates before declaring a phase complete.
+
+Do not hide failing tests merely to obtain a green build.
+
+---
+
+# 15. DOCUMENT WHILE IMPLEMENTING
+
+Documentation is part of the implementation.
+
+Maintain the repository documents required by `AGENTS.md`.
+
+Create ADRs for material architectural decisions.
+
+Public services, policies, complex selectors, provider adapters, background-processing orchestration, and non-obvious algorithms should have meaningful documentation/docstrings explaining matters such as:
+
+* purpose;
+* inputs;
+* outputs;
+* invariants;
+* side effects;
+* transaction boundaries;
+* concurrency behaviour;
+* failure modes;
+* retry/idempotency behaviour.
+
+Do not add meaningless docstrings that merely repeat function or class names.
+
+Use Mermaid diagrams where they materially improve understanding.
+
+---
+
+# 16. DELETE SUPERSEDED IMPLEMENTATIONS
+
+A successful refactor does not consist of placing a new architecture beside the old one indefinitely.
+
+Once migration and verification establish the canonical replacement:
+
+* migrate remaining callers;
+* remove obsolete imports;
+* remove obsolete routes;
+* remove obsolete services;
+* remove obsolete models only after safe data migration/contract;
+* remove unused dependencies;
+* remove obsolete settings;
+* remove stale tests;
+* remove obsolete documentation;
+* remove expired compatibility code.
+
+Version control is the archive.
+
+Do not preserve dead implementations as large commented-out blocks.
+
+---
+
+# 17. FEATURE EXPANSION COMES AFTER ITS DEPENDENCIES
+
+Do not implement Part II growth features against a domain whose canonicalisation gate has not been satisfied.
+
+Before building a dependent feature confirm that:
+
+* one canonical owner exists;
+* duplicate mutable state has been migrated or explicitly marked transitional;
+* important state transitions are explicit;
+* database invariants exist where appropriate;
+* authorization is canonical;
+* compatibility is intentionally managed;
+* baseline tests exist;
+* production assumptions conform to Part II.
+
+Then proceed through the feature programme in dependency order.
+
+Use small, reviewable increments and feature flags where appropriate.
+
+Do not attempt to implement every future feature simultaneously.
+
+---
+
+# 18. CONTINUOUS QUESTIONS FOR EVERY SUBSTANTIAL CHANGE
+
+Before considering a change complete, answer:
+
+```text
+Which canonical domain owns this?
+
+Which existing model/service/policy/selector can be extended?
+
+Am I creating a second source of truth?
+
+Is this state transition explicit?
+
+Is it transaction-safe?
+
+How does it behave under concurrency?
+
+How is server-side authorization enforced?
+
+Can heavy work move out of the request path?
+
+Is retryable work idempotent?
+
+How does it behave under partial failure?
+
+How is backpressure handled?
+
+How is the change observed?
+
+How will operational failure be alerted on?
+
+How is it deployed?
+
+How is it rolled back?
+
+Does it depend on durable local disk?
+
+Can web and worker workloads scale independently?
+
+Does large-media transfer bypass Django where appropriate?
+
+Are provider-specific concerns isolated behind adapters?
+
+How are secrets protected?
+
+What are the privacy and retention implications?
+
+How is the data backed up and restored?
+
+What does the feature cost at scale?
+
+What existing implementation becomes obsolete after this change?
+```
+
+If those questions expose an architectural problem, address it rather than documenting the problem and continuing blindly.
+
+---
+
+# 19. DEFINITION OF DONE
+
+Do not mark work complete merely because a model, task, or endpoint exists.
+
+For applicable changes verify that:
+
+* the canonical domain owns the implementation;
+* duplicate mutable state was not introduced;
+* schema/data migrations are complete;
+* old callers were migrated;
+* security is enforced;
+* permissions are correct;
+* retries are safe;
+* idempotency exists where required;
+* failure states are represented;
+* API contracts are usable and documented;
+* tests pass;
+* observability exists;
+* performance is acceptable;
+* infrastructure impact is understood;
+* media lifecycle is defined where applicable;
+* provider concerns remain behind adapters;
+* queue/backpressure behaviour exists for high-volume work;
+* cost/usage telemetry exists where material;
+* documentation is current;
+* implementation-status tracking is current;
+* superseded code has been removed where safe;
+* no known high-severity regression remains.
+
+Do not claim completion when these conditions are materially unmet.
+
+---
+
+# 20. WORKING AUTONOMY
+
+Do not repeatedly stop to ask for permission for ordinary engineering decisions already governed by `AGENTS.md`.
+
+Use the specification, repository evidence, tests, and sound engineering judgement to make those decisions.
+
+When several compliant implementations are possible, prefer the solution that is:
+
+1. simplest;
+2. canonical;
+3. maintainable;
+4. testable;
+5. secure;
+6. performant;
+7. scalable;
+8. operationally understandable;
+9. economical to run;
+10. easiest to migrate safely.
+
+Do not introduce speculative abstraction merely because it may someday be useful.
+
+If a genuinely material architectural ambiguity remains, document the decision and create an ADR when appropriate.
+
+If a required external service, credential, or unavailable dependency prevents part of the implementation, continue all work that can safely be completed without it and record the precise blocker in the status document.
+
+Do not replace blocked integrations with fake implementations and call them complete.
+
+---
+
+# 21. EXECUTION CADENCE
+
+Work in reviewable increments.
+
+For each increment:
+
+```text
+1. inspect affected implementation
+2. identify canonical ownership
+3. identify data and callers
+4. establish/extend characterization tests
+5. design the smallest correct migration
+6. implement
+7. migrate/backfill where required
+8. migrate callers
+9. test
+10. measure/query-check where relevant
+11. update docs
+12. update SANFOOTBALL_IMPLEMENTATION_STATUS.md
+13. remove superseded implementation when safe
+14. proceed to the next dependency
+```
+
+Do not commit or rewrite unrelated code merely for formatting/style consistency.
+
+Preserve repository history and existing user work.
+
+---
+
+# 22. INITIAL DELIVERABLE AND THEN CONTINUE IMPLEMENTATION
+
+Your first milestone must establish a trustworthy repository baseline.
+
+It should result in, as applicable:
+
+```text
+updated SANFOOTBALL_IMPLEMENTATION_STATUS.md
+docs/architecture-current.md
+docs/refactor-plan.md
+baseline test/check results
+identified pre-existing failures
+characterization tests for high-risk behaviour
+canonical/legacy ownership map
+migration/dependency order
+identified security risks
+identified infrastructure risks
+identified data risks
+identified compatibility constraints
+```
+
+But **do not treat that milestone as the end of the assignment**.
+
+Once the baseline is established, proceed directly into the earliest unresolved Master Phase 1 dependency and begin implementing the canonical architecture.
+
+Continue phase-by-phase and dependency-by-dependency as far as the working session safely allows.
+
+At any reviewable phase boundary, leave the repository in a coherent state and ensure `SANFOOTBALL_IMPLEMENTATION_STATUS.md` precisely describes:
+
+```text
+what you inspected
+what you verified already existed
+what you changed
+what data you migrated
+what callers you migrated
+what tests you added
+what tests passed
+what tests remain failing
+what legacy code remains
+what was deliberately deferred
+what is genuinely blocked
+what risks remain
+what the next dependency-ordered action is
+```
+
+---
+
+# FINAL DIRECTIVE
+
+This is not a request to redesign SANFootball from scratch.
+
+It is a request to **inspect the real existing application, preserve its valuable capabilities and data, consolidate its overlapping generations into canonical domains, modernise it safely, establish the specified production architecture, and then expand it incrementally according to the authoritative `AGENTS.md`.**
+
+Do not create a third architecture on top of the previous two.
+
+Do not optimize for the largest number of changes.
+
+Optimize for a coherent, secure, fast, scalable, observable, cost-aware, production-grade football podcast/media platform with clear domain ownership.
+
+**Begin now with Master Phase 0 repository baseline and characterization. Once that baseline is established, continue into the first unresolved dependency in Master Phase 1 and implement it.**

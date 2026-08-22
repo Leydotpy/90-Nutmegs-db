@@ -1,0 +1,1 @@
+default_app_config = 'apps.media.images.apps.ImagesConfig'

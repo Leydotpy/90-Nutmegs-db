@@ -1,0 +1,1 @@
+default_app_config = 'api.rest.web.apps.media.offline.apps.MediaOfflineWebAPIConfig'
