@@ -9,6 +9,7 @@ from django.utils.translation import gettext_lazy as _
 
 import utils
 from apps.category.models import Category
+from apps.media.canonical import MediaAccessClass, MediaAsset, MediaLocation, MediaVariant
 from apps.posts.models import PostReaction
 from apps.media.images.models import Image
 from apps.thumbnail.models import Thumbnail
@@ -17,7 +18,8 @@ from core.compat import get_user_model
 now = now()
 User = get_user_model()
 
-T = TypeVar('T', bound=models.Model)
+T = TypeVar("T", bound=models.Model)
+
 
 def _get_random(qs: QuerySet[T]) -> T | None:
     count = qs.count()
@@ -62,13 +64,13 @@ class MediaSettings(models.Model):
     auto_download_subscribed = models.BooleanField(default=False)
     download_quality = models.CharField(
         max_length=16,
-        choices=[("low","Low"),("medium","Medium"),("high","High")],
-        default="medium"
+        choices=[("low", "Low"), ("medium", "Medium"), ("high", "High")],
+        default="medium",
     )
     streaming_quality = models.CharField(
         max_length=16,
-        choices=[("low","Low"),("medium","Medium"),("high","High")],
-        default="high"
+        choices=[("low", "Low"), ("medium", "Medium"), ("high", "High")],
+        default="high",
     )
     data_saver_mode = models.BooleanField(default=False)
 
@@ -76,8 +78,8 @@ class MediaSettings(models.Model):
     max_cache_size_mb = models.PositiveIntegerField(default=512)
     cache_eviction_policy = models.CharField(
         max_length=16,
-        choices=[("lru","LRU"),("oldest","Oldest First"),("manual","Manual")],
-        default="lru"
+        choices=[("lru", "LRU"), ("oldest", "Oldest First"), ("manual", "Manual")],
+        default="lru",
     )
 
     # UX / UI
@@ -87,8 +89,8 @@ class MediaSettings(models.Model):
     remember_position_per_episode = models.BooleanField(default=True)
     default_start_position = models.CharField(
         max_length=16,
-        choices=[("beginning","Beginning"),("resume","Resume"),("custom","Custom")],
-        default="resume"
+        choices=[("beginning", "Beginning"), ("resume", "Resume"), ("custom", "Custom")],
+        default="resume",
     )
     skip_on_error = models.BooleanField(default=True)
     prefer_cast_device = models.CharField(max_length=64, null=True, blank=True)
@@ -103,9 +105,7 @@ class MediaSettings(models.Model):
     # transcription
     enable_transcription = models.BooleanField(default=True)
     transcription_provider = models.CharField(
-        max_length=32,
-        choices=(("openai", "OpenAI"), ("google", "Google")),
-        default="openai"
+        max_length=32, choices=(("openai", "OpenAI"), ("google", "Google")), default="openai"
     )
     transcribe_on_upload = models.BooleanField(default=False)
     max_transcription_minutes = models.PositiveIntegerField(default=90)
@@ -122,7 +122,6 @@ class MediaSettings(models.Model):
         if audio_seconds > self.max_transcription_minutes * 60:
             return False
         return True
-
 
 
 class PlaylistQuerySet(models.QuerySet):
@@ -146,10 +145,13 @@ class PlaylistManager(models.Manager):
 
 class PlayList(models.Model):
     """"""
+
     name = models.CharField(max_length=120, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     slug = models.SlugField(default=uuid.uuid4, unique=True, db_index=True, blank=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name="playlists")
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, null=True, blank=True, related_name="playlists"
+    )
     # items = models.ManyToManyField("podcasts.Episode", blank=True)
     items = models.ManyToManyField(
         "podcasts.Episode", through="PlaylistItem", blank=True, related_name="playlists"
@@ -176,6 +178,11 @@ class PlayList(models.Model):
     def get_episodes(self) -> QuerySet:
         return self.items.all()
 
+    def get_discoverable_episodes(self) -> QuerySet:
+        """Bound public playlist serialization to editorially published episodes."""
+
+        return self.items.discoverable()
+
     def get_type(self):
         return f"{self._meta.app_label}.{self.__class__.__name__}"
 
@@ -197,15 +204,13 @@ class PlayList(models.Model):
 
     @property
     def duration(self):
-        episodes = self.get_episodes()
+        episodes = self.get_discoverable_episodes()
         if not episodes.exists():
             return "00:00"
-        return utils.format_duration(
-            sum(episode.get_duration() for episode in episodes)
-        )
+        return utils.format_duration(sum(episode.get_duration() for episode in episodes))
 
     def get_raw_duration(self):
-        episodes = self.get_episodes()
+        episodes = self.get_discoverable_episodes()
         if not episodes.exists():
             return 0
         return sum(episode.get_raw_duration() for episode in episodes)
@@ -219,6 +224,7 @@ class PlaylistItem(models.Model):
     """
     Through model to preserve ordering and metadata about episodes in a playlist.
     """
+
     playlist = models.ForeignKey(PlayList, on_delete=models.CASCADE, related_name="playlist_items")
     episode = models.ForeignKey("podcasts.Episode", on_delete=models.CASCADE)
     position = models.PositiveIntegerField(default=0)

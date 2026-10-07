@@ -1,17 +1,15 @@
 import typing
-import uuid
 
+from core.loading import get_model
 from django.conf import settings
-from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
-from django.db.models import Min, Max
+from django.db.models import Max, Min
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from apps.media.models import PlayList
-from apps.posts.podcasts.models import Podcast, Episode
-from core.loading import get_model
+from apps.posts.podcasts.models import Episode, Podcast
 
 User = settings.AUTH_USER_MODEL
 
@@ -25,10 +23,10 @@ class AppLabel(models.TextChoices):
 class QueueQueryset(models.QuerySet):
 
     def open(self):
-        return self.filter(status="open")
+        return self.filter(date_merged__isnull=True)
 
     def merged(self):
-        return self.filter(status="merged")
+        return self.filter(date_merged__isnull=False)
 
 
 class OpenQueueManager(models.Manager):
@@ -37,7 +35,7 @@ class OpenQueueManager(models.Manager):
         return QueueQueryset(self.model, using=self._db).open()
 
     def get_or_create(self, **kwargs):
-        return self.get_queryset().get_or_create(status="open", **kwargs)
+        return self.get_queryset().get_or_create(**kwargs)
 
 
 class QueueManager(models.Manager):
@@ -45,13 +43,25 @@ class QueueManager(models.Manager):
     def get_queryset(self):
         return QueueQueryset(self.model, using=self._db)
 
+    def open(self):
+        return self.get_queryset().open()
+
+    def merged(self):
+        return self.get_queryset().merged()
+
     def ger(self):
         self.get_or_create()
 
 
 class Queue(models.Model):
     date_merged = models.DateTimeField(null=True, blank=True)
-    owner = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE, related_name="queues")
+    owner = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="queues",
+    )
     session_key = models.CharField(max_length=64, null=True, blank=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     last_activity = models.DateTimeField(auto_now=True)
@@ -101,7 +111,15 @@ class Queue(models.Model):
         if self.id is None:
             return self.items.model.objects.none()
         if self._items is None:
-            self._items = self.items.select_related("track").order_by(self._meta.pk.name)
+            self._items = (
+                self.items.select_related("track")
+                .filter(track_id__in=Episode.objects.discoverable().values("pk"))
+                .order_by(
+                    "position",
+                    "added_at",
+                    "pk",
+                )
+            )
         return self._items
 
     def count(self):
@@ -123,8 +141,9 @@ class Queue(models.Model):
         if override:
             # Prepend: Find current minimum and subtract
             current_min = self.items.aggregate(m=Min('position'))['m'] or 0
-            # Result: [min-1, min-2, min-3...]
-            return [current_min - (i + 1) for i in range(count)]
+            # Keep the input order stable while placing the whole group before
+            # the current first item.
+            return list(range(current_min - count, current_min))
 
         # Append: Find current maximum and add
         current_max = self.items.aggregate(m=Max('position'))['m'] or 0
@@ -137,18 +156,25 @@ class Queue(models.Model):
         """
         obj = self._get_item(item_id, app_label)  # Assuming you have this helper method defined
 
+        if isinstance(obj, PlayList) and obj.user_id is not None and obj.user_id != self.owner_id:
+            raise ValueError("Playlist is not available for queueing")
+
         # 1. Prepare list of episodes to add
         episodes_to_add = []
 
         if isinstance(obj, Episode):
+            if not Episode.objects.discoverable().filter(pk=obj.pk).exists():
+                raise ValueError("Episode is not available for queueing")
             # Check if exists to prevent duplicates (optional logic based on your needs)
             if not self.items.filter(track_id=obj.id).exists():
                 episodes_to_add = [obj]
-        elif hasattr(obj, "get_episodes"):
+        elif hasattr(obj, "get_discoverable_episodes"):
             # It is a Podcast/Collection
             # Filter out episodes that are ALREADY in the queue to avoid unique constraint errors
             existing_ids = set(self.items.values_list("track_id", flat=True))
-            episodes_to_add = list(obj.get_episodes().exclude(id__in=existing_ids))
+            episodes_to_add = list(
+                obj.get_discoverable_episodes().exclude(id__in=existing_ids)
+            )
         else:
             raise ValueError(f"Object {obj} cannot be added to queue")
 
@@ -165,33 +191,33 @@ class Queue(models.Model):
                 track_id=episode.id,
                 position=position
             )
-            for episode, position in zip(episodes_to_add, positions)
+            for episode, position in zip(episodes_to_add, positions, strict=True)
         ]
 
         # 4. Bulk Create
         self.items.bulk_create(queue_items, batch_size=50)
+        self._items = None
 
         return self
 
     def merge_item(self, item):
-        try:
-            self.items.get(id=item.id)
-        except ObjectDoesNotExist:
-            item.queue = self
-            item.save()
-        else:
+        if self.items.filter(track_id=item.track_id).exists():
             item.delete()
-        finally:
-            self._items = None
+        else:
+            item.queue = self
+            item.position = self._calculate_positions(1)[0]
+            item.order = item.position
+            item.save(update_fields=["queue", "position", "order"])
+        self._items = None
 
     merge_item.alters_data = True
 
     def merge(self, queue: typing.Self):
-        for item_to_merge in queue.items.all():
+        for item_to_merge in queue.items.order_by("position", "added_at", "pk"):
             self.merge_item(item_to_merge)
         queue.date_merged = timezone.now()
         queue._items = None
-        queue.save()
+        queue.save(update_fields=["date_merged"])
 
     merge.alters_data = True
 

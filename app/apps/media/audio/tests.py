@@ -1,11 +1,14 @@
 # tests/test_process_audio.py
+import datetime
 import importlib
 import os
-import tempfile as _tempfile
 from types import SimpleNamespace
 from unittest import mock
+from uuid import uuid4
 
+from django.core.cache import cache
 from django.test import TestCase
+from django.utils import timezone
 
 # === UPDATE THIS to point at the module containing process_audio ===
 MODULE_PATH = "apps.media.audio.tasks"  # <-- <--- change this to your real module path
@@ -15,8 +18,6 @@ class ProcessAudioTests(TestCase):
     def setUp(self):
         # Import target module once per test-run
         self.module = importlib.import_module(MODULE_PATH)
-        # real mkdtemp to call from side-effect
-        self.real_mkdtemp = _tempfile.mkdtemp
 
     def _make_dummy_audio(self, audio_id):
         """
@@ -64,12 +65,20 @@ class ProcessAudioTests(TestCase):
     def _capture_mkdtemp(self, created_list):
         """
         Return a side-effect function to patch tempfile.mkdtemp inside the module under test.
-        It uses the real mkdtemp and appends created path to created_list for inspection.
+        It creates a unique directory with inherited permissions and appends its
+        path to created_list for inspection.
+
+        Python's tempfile.mkdtemp applies a private ACL on managed Windows test
+        runners.  The sandbox can create that directory but cannot subsequently
+        open files in or remove it, so use os.mkdir under this writable test
+        package instead.  Production still exercises tempfile.mkdtemp; only its
+        location-producing boundary is replaced here.
         """
 
         def mkdtemp_side_effect(*args, **kwargs):
-            # follow same signature as tempfile.mkdtemp: prefix=..., dir=...
-            path = self.real_mkdtemp(*args, **kwargs)
+            prefix = kwargs.get("prefix", "tmp")
+            path = os.path.join(os.path.dirname(__file__), f"{prefix}{uuid4().hex}")
+            os.mkdir(path)
             created_list.append(path)
             return path
 
@@ -101,14 +110,14 @@ class ProcessAudioTests(TestCase):
                     "sample_rate": 44100,
                     "codec": "mp3",
                     "duration": 60.0,
-                }) as detect_info_mock, \
-                        mock.patch(f"{MODULE_PATH}.generate_variants", return_value=[]) as gen_var_mock, \
-                        mock.patch(f"{MODULE_PATH}.generate_hls_stream", return_value=None) as gen_hls_mock, \
-                        mock.patch(f"{MODULE_PATH}.generate_preview_clip", return_value=None) as gen_preview_mock, \
-                        mock.patch(f"{MODULE_PATH}.generate_transcription", return_value=None) as gen_trans_mock:
-                    # Run and capture logs at ERROR level and above
+                }), \
+                        mock.patch(f"{MODULE_PATH}.generate_variants", return_value=[]), \
+                        mock.patch(f"{MODULE_PATH}.generate_hls_stream", return_value=None), \
+                        mock.patch(f"{MODULE_PATH}.generate_preview_clip", return_value=None), \
+                        mock.patch(f"{MODULE_PATH}.generate_transcription", return_value=None):
+                    # Run and assert that the successful path emits no errors.
                     logger_name = module.__name__
-                    with self.assertLogs(logger_name, level="ERROR") as log_cm:
+                    with self.assertNoLogs(logger_name, level="ERROR"):
                         result = module.process_audio(audio_id=audio_id, user_id=None)
 
                     # Assertions: function returned audio.id and marked processed True
@@ -125,10 +134,6 @@ class ProcessAudioTests(TestCase):
                     for p in created_tmpdirs:
                         self.assertFalse(os.path.exists(p),
                                          f"Tempdir {p!r} should be removed after process_audio finishes")
-
-                    # ensure no ERROR logs were emitted (success path)
-                    self.assertEqual(len(log_cm.output), 0,
-                                     f"Expected no ERROR-level logs on success, got: {log_cm.output}")
 
     def test_process_audio_transcription_raises_is_logged_but_processing_continues(self):
         module = self.module
@@ -160,7 +165,6 @@ class ProcessAudioTests(TestCase):
                     # capture logs and assert that the exception was logged. The function should continue.
                     logger_name = module.__name__
                     with self.assertLogs(logger_name, level="ERROR") as log_cm:
-                        print("audio_id ==> ", audio_id)
                         result = module.process_audio(audio_id)
 
                     # The function should not raise but should return id and mark processed True
@@ -169,8 +173,9 @@ class ProcessAudioTests(TestCase):
                                     "Even with transcription failure, audio.processed should still be set")
 
                     # the last ERROR log should contain the message "Transcription generation failed"
-                    error_logs = [l for l in log_cm.output if
-                                  "Transcription generation failed" in l or "Transcription provider failed" in l]
+                    error_logs = [entry for entry in log_cm.output if
+                                  "Transcription generation failed" in entry or
+                                  "Transcription provider failed" in entry]
                     self.assertTrue(error_logs, f"Expected transcription-related ERROR logs, got: {log_cm.output}")
 
                     # tmpdir should be cleaned up
@@ -204,3 +209,45 @@ class ProcessAudioTests(TestCase):
                                 "Expected tempfile to be created even for missing audio case")
                 for p in created_tmpdirs:
                     self.assertFalse(os.path.exists(p), f"Tempdir {p!r} should be removed even when audio missing")
+
+    @mock.patch(f"{MODULE_PATH}.generate_cloudfront_signed_cookies")
+    @mock.patch(f"{MODULE_PATH}.Audio")
+    def test_cloudfront_rotation_caches_timezone_aware_expiry(
+        self,
+        audio_model,
+        sign_cookies,
+    ):
+        hls_id = uuid4()
+        audio_model.Quality.HLS = "hls"
+        audio_model.objects.filter.return_value.values.return_value = [
+            {
+                "id": hls_id,
+                "prefix": "episodes/test/hls",
+                "file": "episodes/test/hls/index.m3u8",
+            }
+        ]
+        expires_at = timezone.now() + datetime.timedelta(minutes=10)
+        sign_cookies.return_value = {
+            "cookies": {
+                "CloudFront-Key-Pair-Id": "key",
+                "CloudFront-Policy": "signed-policy",
+                "CloudFront-Signature": "signed-signature",
+            },
+            "expires_at": expires_at,
+        }
+        cache_key = f"cf_signed_cookies:{hls_id}"
+        cache.delete(cache_key)
+
+        with mock.patch.object(self.module.settings, "CLOUDFRONT_DOMAIN", "media.example.test"), \
+                mock.patch.object(self.module.settings, "CLOUDFRONT_COOKIE_DOMAIN", "example.test"), \
+                mock.patch.object(self.module.settings, "CLOUDFRONT_KEY_PAIR_ID", "key"), \
+                mock.patch.object(self.module.settings, "CLOUDFRONT_PRIVATE_KEY", "private"):
+            self.module.rotate_cloud_front_cookies()
+
+        cached = cache.get(cache_key)
+        self.assertEqual(cached["expires_at"], expires_at)
+        self.assertTrue(timezone.is_aware(cached["expires_at"]))
+        self.assertEqual(
+            cached["resource_url"],
+            "https://media.example.test/episodes/test/hls/*",
+        )

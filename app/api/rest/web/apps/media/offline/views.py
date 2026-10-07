@@ -4,79 +4,68 @@ import secrets
 from datetime import timedelta
 
 import boto3
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import padding
+from apps.media.offline.models import Device, License, Package, Packaging
+from apps.media.offline.tasks import build_offline_package_task
+from apps.media.storage import generate_presigned_url_for_name
+from apps.memberships.access import AccessService
+from apps.memberships.policies import AccessAction
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from api.rest.web.apps.media.offline.serializers import DeviceRegisterSerializer, OfflineRequestSerializer
-from apps.media.offline.models import Device, License, Package, Packaging
-from apps.media.offline.tasks import build_offline_package_task, get_package_status
-from apps.media.storage import generate_presigned_url_for_name
+from api.rest.web.apps.media.offline.serializers import (
+    DeviceRegisterSerializer,
+    DeviceRegistrationResponseSerializer,
+    OfflineDetailResponseSerializer,
+    OfflineLicenseRevocationResponseSerializer,
+    OfflinePackageAcceptedResponseSerializer,
+    OfflinePackageLicenseResponseSerializer,
+    OfflinePackagingStatusResponseSerializer,
+    OfflineRequestSerializer,
+)
 
 logger = logging.getLogger(__name__)
 
 
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def request_offline_license(request, package_id):
-    """
-    Client sends:
-      - device_id (unique per-install)
-    """
-    device_id = request.data.get("device_id")
-    package = get_object_or_404(Package, pk=package_id)
-    device = get_object_or_404(Device, device_id=device_id, user=request.user)
-    # encrypted_dek is the KMS-encrypted DEK. For device wrapping we need plaintext DEK.
-    # Option A: ask KMS to decrypt the encrypted_dek then encrypt with device public key (will require server KMS decrypt permission).
-    kms_client = boto3.client("kms")
-    resp = kms_client.decrypt(CiphertextBlob=package.encrypted_dek)
-    plaintext_dek = resp["Plaintext"]
-    # encrypt plaintext_dek to device public key
-    public_key = serialization.load_pem_public_key(device.public_key_pem.encode())
-    wrapped = public_key.encrypt(plaintext_dek,
-                                 padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(),
-                                              label=None))
-    # Create license record with expiry
-    expires_at = timezone.now() + timedelta(days=7)
-    lic = License.objects.create(
-        package=package,
-        user=request.user,
-        device_id=device_id,
-        encrypted_dek_for_device=wrapped,
-        issued_at=timezone.now(),
-        expires_at=expires_at
-    )
-    # Return presigned download URL for package + encrypted DEK payload (optional)
-    s3 = boto3.client("s3")
-    bucket = getattr(settings, "AWS_STORAGE_BUCKET_NAME")
-    presigned = s3.generate_presigned_url("get_object", Params={"Bucket": bucket, "Key": package.storage_key},
-                                          ExpiresIn=3600)
-    return Response({
-        "license_id": str(lic.id),
-        "download_url": presigned,
-        "expires_at": expires_at.isoformat(),
-    })
-
-
+@extend_schema(
+    request=DeviceRegisterSerializer,
+    responses={
+        201: DeviceRegistrationResponseSerializer,
+        400: OfflineDetailResponseSerializer,
+    },
+)
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def register_device(request):
     """
     Register / update a device. Client provides device_id, public_key_pem, device_type, name, etc.
     """
+    if not getattr(settings, "CUSTOM_OFFLINE_DRM_ENABLED", False):
+        return Response(
+            {"detail": "Offline packaging is not available."},
+            status=403,
+        )
     serializer = DeviceRegisterSerializer(data=request.data, context={"request": request})
     serializer.is_valid(raise_exception=True)
     device = serializer.save()
     return Response({"device_id": device.device_id, "id": str(device.id)}, status=201)
 
 
+@extend_schema(
+    request=OfflineRequestSerializer,
+    responses={
+        201: OfflinePackageLicenseResponseSerializer,
+        202: OfflinePackageAcceptedResponseSerializer,
+        400: OfflineDetailResponseSerializer,
+        403: OfflineDetailResponseSerializer,
+        404: OfflineDetailResponseSerializer,
+    },
+)
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def request_offline_package(request):
@@ -88,6 +77,12 @@ def request_offline_package(request):
       - if package exists -> create license and return presigned url + wrapped dek
       - else enqueue packaging task (returns task_id), and return job status endpoint
     """
+    if not getattr(settings, "CUSTOM_OFFLINE_DRM_ENABLED", False):
+        return Response(
+            {"detail": "Offline packaging is not available."},
+            status=403,
+        )
+
     serializer = OfflineRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     user = request.user
@@ -97,26 +92,19 @@ def request_offline_package(request):
     days_valid = serializer.validated_data["days_valid"]
     max_plays = serializer.validated_data.get("max_plays")
 
-    # entitlement checks
-    if not episode.offline_allowed:
-        return Response({"detail": "Offline download disabled for this episode"}, status=403)
-
-    # check user's plan / entitlement - adapt to your policy
-    def user_has_offline_entitlement(u, episode):
-        # Example: episode.access_tier vs user's plan slug; or global user setting
-        try:
-            plan = u.transcription_quota.plan
-            if getattr(plan, "can_download_high_quality", False):
-                return True
-        except Exception:
-            pass
-        # fall back: if episode is free
-        if getattr(episode, "is_free", False):
-            return True
-        return False
-
-    if not user_has_offline_entitlement(user, episode):
-        return Response({"detail": "Your subscription does not allow offline downloads for this episode"}, status=403)
+    decision = AccessService.get_instance().evaluate(
+        user=user,
+        resource=episode,
+        action=AccessAction.DOWNLOAD,
+    )
+    if not decision.allowed:
+        return Response(
+            {
+                "detail": "Your account cannot download this episode.",
+                "reason": decision.reason.value,
+            },
+            status=403,
+        )
 
     # find device
     try:
@@ -147,7 +135,7 @@ def request_offline_package(request):
         }, status=201)
 
     # else create PackagingJob and enqueue
-    callback_url = request.data.get("callback_url")  # optional
+    callback_url = serializer.validated_data.get("callback_url")
     webhook_secret = None
     if callback_url:
         webhook_secret = secrets.token_urlsafe(32)[:64]  # store secret for signing
@@ -188,7 +176,7 @@ def _create_license_for_device(pkg: Package, user, device: Device, days_valid: i
     plaintext_dek = dec["Plaintext"]
 
     # wrap plaintext_dek with device public key PEM
-    from cryptography.hazmat.primitives import serialization, hashes
+    from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import padding as asympadding
 
     pubkey = serialization.load_pem_public_key(device.public_key_pem.encode())
@@ -215,6 +203,10 @@ def _package_presigned_url(pkg: Package):
     return url
 
 
+@extend_schema(
+    request=None,
+    responses={200: OfflinePackagingStatusResponseSerializer},
+)
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def packaging_status(request, task_id):
@@ -224,10 +216,27 @@ def packaging_status(request, task_id):
       - package_id (if success)
       - error (if failed)
     """
-    status_info = get_package_status(task_id)
+    if not getattr(settings, "CUSTOM_OFFLINE_DRM_ENABLED", False):
+        return Response(
+            {"detail": "Offline packaging is not available."},
+            status=403,
+        )
+    job = get_object_or_404(Packaging, task_id=task_id, user=request.user)
+    status_info = {"status": job.status}
+    if job.status == Packaging.STATUS_SUCCESS and job.package_id:
+        status_info["package_id"] = str(job.package_id)
+    elif job.status == Packaging.STATUS_FAILED:
+        status_info["error"] = "Packaging failed"
     return Response(status_info)
 
 
+@extend_schema(
+    request=None,
+    responses={
+        200: OfflineLicenseRevocationResponseSerializer,
+        404: OfflineDetailResponseSerializer,
+    },
+)
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def revoke_license(request, license_id):

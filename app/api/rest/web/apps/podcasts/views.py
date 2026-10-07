@@ -1,31 +1,36 @@
+from apps.accounts.history import UserHistoryManager
+from apps.posts.podcasts.models import Episode, PlayBack, Podcast
+from apps.posts.podcasts.signals import podcast_viewed
+from apps.promotions.models import AutomaticPostList, HandPickedPostList
+from apps.promotions.models import Image as PromotionImage
 from rest_framework import filters
 from rest_framework.generics import (
+    GenericAPIView,
     ListAPIView,
+    RetrieveAPIView,
+    UpdateAPIView,
     get_object_or_404,
-    GenericAPIView, UpdateAPIView,
 )
-from rest_framework.generics import RetrieveAPIView
-from rest_framework.pagination import PageNumberPagination, CursorPagination
+from rest_framework.pagination import CursorPagination, PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from api.rest.dashboard.pagination import StandardResultPagination
-from api.rest.web.serializers.comments import CommentDetailSerializer
 from api.rest.web.apps.podcasts.serializers import (
-    EpisodeDetailSerializer,
-    PodcastDetailSerializer,
-    HandPickedPodcastPromotionSerializers,
     AutomaticPodcastPromotionSerializer,
-    PromotionSerializer,
+    EpisodeDetailSerializer,
     EpisodeListSerializer,
-    PodcastListSerializer, PlayBackModelSerializer, PlayBackUpdateSerializer, ImageBannerPromotionSerializer,
+    HandPickedPodcastPromotionSerializers,
+    ImageBannerPromotionSerializer,
+    PlayBackModelSerializer,
+    PlayBackUpdateSerializer,
+    PodcastDetailSerializer,
+    PodcastListSerializer,
+    PromotionSerializer,
 )
 from api.rest.web.apps.podcasts.utils import make_automatic_post_module, make_handpicked_module
+from api.rest.web.serializers.comments import CommentDetailSerializer
 from api.rest.web.utils import PageNumberPaginationClass
-from apps.accounts.history import UserHistoryManager
-from apps.posts.podcasts.models import Podcast, Episode, PlayBack
-from apps.posts.podcasts.signals import podcast_viewed
-from apps.promotions.models import AutomaticPostList, HandPickedPostList, Image as PromotionImage
 
 
 class TrendingPodcastAPIView(ListAPIView):
@@ -39,9 +44,10 @@ class TrendingPodcastAPIView(ListAPIView):
 
 # Import your serializers and models here
 
+
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 10
-    page_size_query_param = 'page_size'
+    page_size_query_param = "page_size"
 
 
 class PodcastDetailAPIView(RetrieveAPIView):
@@ -49,6 +55,10 @@ class PodcastDetailAPIView(RetrieveAPIView):
     serializer_class = PodcastDetailSerializer
     permission_classes = (AllowAny,)
     lookup_field = "slug"
+
+    def get_queryset(self):
+        # Resolve the publication window at request time, not module import time.
+        return Podcast.objects.published()
 
     def get_episodes_queryset(self, podcast):
         """
@@ -59,18 +69,18 @@ class PodcastDetailAPIView(RetrieveAPIView):
         season_slug = self.request.query_params.get("season")
 
         if season_slug:
-            # Try to find the specific season (child podcast)
-            season = podcast.get_seasons().filter(slug=season_slug).first()
+            # Resolve the explicit canonical Season by its stable slug.
+            season = podcast.get_seasons().published().filter(slug=season_slug).first()
             if season:
-                return season.get_episodes()
+                return season.get_discoverable_episodes().select_related("season")
 
         # Fallback: Return direct episodes of the podcast
         # Or if you want the first season's episodes by default:
-        first_season = podcast.get_seasons().first()
+        first_season = podcast.get_seasons().published().first()
         if first_season:
-            return first_season.get_episodes()
+            return first_season.get_discoverable_episodes().select_related("season")
 
-        return podcast.get_episodes()
+        return podcast.get_discoverable_episodes().select_related("season")
 
     def retrieve(self, request, *args, **kwargs):
         """
@@ -92,29 +102,23 @@ class PodcastDetailAPIView(RetrieveAPIView):
 
         # 3. Serialize the episodes separately
         episodes_data = {
-            'count': paginator.page.paginator.count,
-            'next': paginator.get_next_link(),
-            'previous': paginator.get_previous_link(),
-            'results': EpisodeListSerializer(paginated_episodes, many=True, context={'request': request}).data
+            "count": paginator.page.paginator.count,
+            "next": paginator.get_next_link(),
+            "previous": paginator.get_previous_link(),
+            "results": EpisodeListSerializer(
+                paginated_episodes, many=True, context={"request": request}
+            ).data,
         }
 
         # 4. Pass the episode data to the main serializer context
         serializer = self.get_serializer(
-            podcast,
-            context={
-                'request': request,
-                'paginated_episodes': episodes_data
-            }
+            podcast, context={"request": request, "paginated_episodes": episodes_data}
         )
 
         response = Response(serializer.data)
 
         podcast_viewed.send(
-            sender=self,
-            request=request,
-            podcast=podcast,
-            response=response,
-            user=request.user
+            sender=self, request=request, podcast=podcast, response=response, user=request.user
         )
         return response
 
@@ -133,6 +137,9 @@ class EpisodeDetailAPIView(RetrieveAPIView):
     lookup_field = "slug"
     queryset = Episode.objects.all()
 
+    def get_queryset(self):
+        return Episode.objects.discoverable().select_related("podcast", "season")
+
 
 class EpisodeListAPIView(ListAPIView):
     permission_classes = (AllowAny,)
@@ -143,21 +150,21 @@ class EpisodeListAPIView(ListAPIView):
     def get_object(self) -> Podcast:
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
-        return get_object_or_404(Podcast.objects.all(), **filter_kwargs)
+        return get_object_or_404(Podcast.objects.published(), **filter_kwargs)
 
     def get_queryset(self):
-        return self.get_object().get_episodes()
+        return self.get_object().get_discoverable_episodes().select_related("season")
 
 
 class HandpickedPromotionsAPIView(ListAPIView):
     serializer_class = HandPickedPodcastPromotionSerializers
-    queryset = HandPickedPostList.objects.all()
+    queryset = HandPickedPostList.objects.order_by("pk")
     permission_classes = (AllowAny,)
 
 
 class AutomaticPromotionAPIView(ListAPIView):
     serializer_class = AutomaticPodcastPromotionSerializer
-    queryset = AutomaticPostList.objects.all()
+    queryset = AutomaticPostList.objects.order_by("pk")
     permission_classes = (AllowAny,)
 
 
@@ -182,25 +189,21 @@ class PromotionsAPIView(GenericAPIView):
             "automatic": self.make_module(automatic),
             "handpicked": self.make_module(handpicked),
             "banners": ImageBannerPromotionSerializer(
-                PromotionImage.objects.ready(),
+                PromotionImage.objects.ready().discoverable(),
                 many=True,
                 context=self.get_serializer_context(),
             ).data,
         }
         history = PodcastListSerializer(
-            UserHistoryManager.get(request),
-            many=True,
-            context=self.get_serializer_context()
+            UserHistoryManager.get(request), many=True, context=self.get_serializer_context()
         ).data
         trending = PodcastListSerializer(
-            Podcast.objects.trending(),
-            many=True,
-            context=self.get_serializer_context()
+            Podcast.objects.trending(), many=True, context=self.get_serializer_context()
         ).data
         playback = PlayBackModelSerializer(
             PlayBack.objects.get_uncompleted(request),
             many=True,
-            context=self.get_serializer_context()
+            context=self.get_serializer_context(),
         ).data
         data = {
             "promotions": promotions,
@@ -234,9 +237,12 @@ class PlaybackUpdateAPIView(UpdateAPIView):
     queryset = Episode.objects.all()
     lookup_field = "slug"
 
+    def get_queryset(self):
+        return Episode.objects.discoverable()
+
     def put(self, request, *args, **kwargs):
         return self.patch(request, *args, **kwargs)
-    
+
     def patch(self, request, *args, **kwargs):
         return super().patch(request, *args, **kwargs)
 
@@ -251,5 +257,8 @@ class PodcastCommentListAPIView(ListAPIView):
     lookup_field = "id"
 
     def get_queryset(self):
-        podcast = get_object_or_404(Podcast.objects.all(), pk=self.kwargs[self.lookup_url_kwarg])
+        podcast = get_object_or_404(
+            Podcast.objects.published(),
+            pk=self.kwargs[self.lookup_url_kwarg],
+        )
         return podcast.get_comments().select_related("user")

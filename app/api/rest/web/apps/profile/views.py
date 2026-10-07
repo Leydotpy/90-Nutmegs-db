@@ -1,22 +1,24 @@
-from django.db import transaction, models
-from rest_framework import viewsets, permissions, parsers, status
+from apps.media.models import MediaSettings, PlayList, PlaylistItem
+from apps.posts.podcasts.models import Episode, Podcast
+from django.db import models, transaction
+from rest_framework import parsers, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework.generics import RetrieveAPIView, ListAPIView, GenericAPIView
+from rest_framework.generics import GenericAPIView, ListAPIView, RetrieveAPIView
 from rest_framework.mixins import CreateModelMixin
-from rest_framework.permissions import IsAuthenticated, AllowAny, BasePermission
+from rest_framework.permissions import AllowAny, BasePermission, IsAuthenticated
 from rest_framework.response import Response
 
 from api.rest.web.apps.podcasts.serializers import (
+    PodcastListSerializer,
     SubscribeSerializer,
-    PodcastListSerializer
 )
-from api.rest.web.serializers.playlist import PlaylistUserCreateSerializer, PlayListModelSerializer
 from api.rest.web.serializers.media import MediaSettingModelSerializer
+from api.rest.web.serializers.playlist import (
+    PlayListModelSerializer,
+    PlaylistUserCreateSerializer,
+)
 from api.rest.web.utils import PageNumberPaginationClass
-from apps.media.models import PlayList, PlaylistItem, MediaSettings
-from apps.posts.podcasts.models import Episode
-from apps.posts.podcasts.models import Podcast
 
 
 class IsOwnerOrReadOnly(BasePermission):
@@ -154,7 +156,7 @@ class PlaylistUserViewSet(viewsets.ModelViewSet):
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         episode_ids = [p["episode_id"] for p in parsed]
-        episodes = {e.pk: e for e in Episode.objects.filter(pk__in=episode_ids)}
+        episodes = {e.pk: e for e in Episode.objects.discoverable().filter(pk__in=episode_ids)}
         missing = [eid for eid in episode_ids if eid not in episodes]
         if missing:
             return Response({"detail": "some episodes not found", "missing": missing}, status=status.HTTP_404_NOT_FOUND)
@@ -323,7 +325,7 @@ class ReactionsListApiView(RetrieveAPIView):
 class SubscribedListPodcastAPIView(ListAPIView):
     serializer_class = PodcastListSerializer
     permission_classes = (IsAuthenticated,)
-    pagination_class = (PageNumberPaginationClass,)
+    pagination_class = PageNumberPaginationClass
 
     def get_queryset(self):
         return Podcast.objects.get_user_subscriptions(self.request.user)

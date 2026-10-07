@@ -167,7 +167,14 @@ def get_default_currency():
     prevents Django's core migration engine from interpreting a change to
     DEFAULT_CURRENCY as something it needs to generate a migration for.
     """
-    return settings.DEFAULT_CURRENCY
+    # The project currently exposes the legacy Oscar-style setting as
+    # ``STORE_DEFAULT_CURRENCY``.  Keep the callable migration default usable
+    # while accepting the canonical spelling when it is introduced.
+    return getattr(
+        settings,
+        "DEFAULT_CURRENCY",
+        getattr(settings, "STORE_DEFAULT_CURRENCY", "GBP"),
+    )
 
 
 def round_half_up(money):
@@ -183,5 +190,4 @@ def round_half_up(money):
     Decimal('1.01')
     """
     return money.quantize(decimal.Decimal('0.01'), decimal.ROUND_HALF_UP)
-
 

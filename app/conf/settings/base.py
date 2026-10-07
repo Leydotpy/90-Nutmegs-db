@@ -10,7 +10,6 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
-import os
 from pathlib import Path
 
 from decouple import config
@@ -21,11 +20,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "+u&%@9d!syo2pspig$z23i%+%yfg7w+p6bgi-9^ikvjf62#$")
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DEBUG", True)
+# Environment-specific modules own the final secret/debug posture. Production
+# replaces this development-only fallback with a required secret.
+SECRET_KEY = config(
+    "DJANGO_SECRET_KEY",
+    default="unsafe-shared-key-select-an-explicit-settings-module",
+)
+DEBUG = False
 
 ALLOWED_HOSTS = []
 
@@ -51,6 +52,7 @@ INSTALLED_APPS = [
     'django_celery_beat',
     'drf_spectacular',
     'drf_spectacular_sidecar',  # optional: swagger-ui static
+    'pycflare.django',
     # Local Apps
     # API ROUTING
     'api.config.Api',
@@ -76,7 +78,6 @@ INSTALLED_APPS = [
     'api.rest.web.apps.profile.apps.ProfileWebAPIConfig',
     'api.rest.web.apps.queue.apps.QueueWebAPIConfig',
     # NATIVE APPS
-    "apps.config.Config",
     "apps.accounts.apps.AccountsConfig",
     "apps.analytics.apps.AnalyticsConfig",
     "apps.billing.apps.BillingConfig",
@@ -120,6 +121,9 @@ MIDDLEWARE = [
 ]
 
 REST_FRAMEWORK = {
+    # ``format`` is an established stream-selection query parameter in this
+    # API. Disable DRF's renderer override so ``?format=hls`` reaches the view.
+    "URL_FORMAT_OVERRIDE": None,
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,  # sensible default, tune as needed
     "DEFAULT_THROTTLE_CLASSES": [
@@ -148,9 +152,10 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        # 'django_clerk_sdk.core.auth.clerk.authentication.ClerkAuthentication',
+        'api.rest.authentication.ClerkBearerAuthentication',
+        # Dashboard/browser compatibility remains explicit during the identity
+        # migration; bearer authentication is always attempted first.
         'rest_framework.authentication.SessionAuthentication',
-        # 'rest_framework.authentication.TokenAuthentication',
     )
 }
 
@@ -159,6 +164,11 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "API for matches, live events, podcasts and analytics",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    "ENUM_NAME_OVERRIDES": {
+        "EpisodePublicationStatusEnum": (
+            "apps.posts.podcasts.models.Episode.PublicationStatus"
+        ),
+    },
 }
 
 AUTH_USER_MODEL = 'users.ClerkUser'
@@ -183,6 +193,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "conf.wsgi.application"
+ASGI_APPLICATION = "conf.asgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
@@ -190,7 +201,7 @@ WSGI_APPLICATION = "conf.wsgi.application"
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": config("REDIS_URL", cast=str),
+        "LOCATION": config("REDIS_URL", default="redis://127.0.0.1:6379/1"),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
@@ -232,17 +243,20 @@ CELERY_TASK_TIME_LIMIT = 30 * 60
 # ...
 
 # Celery settings
-CELERY_BROKER_URL = config("CELERY_BROKER_URL", cast=str)
+CELERY_BROKER_URL = config("CELERY_BROKER_URL", default="redis://127.0.0.1:6379/2")
 # CELERY_RESULT_BACKEND = config("CELERY_RESULT_BACKEND", cast=str)
 
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'default'
 
 
-DATABASE_URL = config("DATABASE_URL", cast=str, default='sqlite:///db.sqlite3')
+DATABASE_URL = config("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
 
 DATABASES = {
-    "default": {}
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
 }
 
 # Password validation
@@ -277,19 +291,24 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = "static/"
-MEDIA_URL = 'media/'
-MEDIA_ROOT = BASE_DIR / 'static' / 'media'
+STATIC_URL = "/static/"
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "var" / "media"
 STATIC_ROOT = BASE_DIR / 'static' / 'static'
 
-STATICFILES_DIRS = (
-    BASE_DIR / "static",
+STATICFILES_DIRS = tuple(
+    path for path in (BASE_DIR / "static",) if path.exists()
 )
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ``manage.py`` is invoked from the repository root while Django source lives
+# below ``app/``. Root discovery must begin at BASE_DIR or unittest stops at the
+# non-package source directory and silently reports zero tests.
+TEST_RUNNER = "conf.test_runner.SourceRootDiscoverRunner"
 
 SLUG_ALLOW_UNICODE = False
 
@@ -360,9 +379,14 @@ OSCAR_COOKIES_DELETE_ON_LOGOUT = [
     "RECENTLY_VIEWED_ITEMS",
 ]
 
-CLERK_SECRET_KEY = config('CLERK_SECRET_KEY')
-CLERK_AUTH_PARTIES = (
-    "http://localhost:3000",
+CLERK_SECRET_KEY = config("CLERK_SECRET_KEY", default="")
+CLERK_AUTH_PARTIES = tuple(
+    party.strip()
+    for party in config(
+        "CLERK_AUTH_PARTIES",
+        default="http://localhost:3000",
+    ).split(",")
+    if party.strip()
 )
 
 
@@ -375,6 +399,24 @@ GIFFY_CLIENT_ID = config("GIFFY_CLIENT_ID", default="sanfootball-main")
 GIFFY_SERVICE_CLIENT_ID = config("GIFFY_SERVICE_CLIENT_ID", default="sanfootball-giffy")
 GIFFY_SHARED_SECRET = config("GIFFY_SHARED_SECRET", default="change-me")
 GIFFY_TIMEOUT_SECONDS = config("GIFFY_TIMEOUT_SECONDS", cast=float, default=30)
+
+# Legacy offline webhooks are disabled unless their exact scheme/host/port is
+# configured. This prevents an authenticated client from turning a worker into
+# an arbitrary server-side request primitive.
+OFFLINE_WEBHOOK_ALLOWED_ORIGINS = tuple(
+    origin.strip().rstrip("/")
+    for origin in config("OFFLINE_WEBHOOK_ALLOWED_ORIGINS", default="").split(",")
+    if origin.strip()
+)
+
+# The legacy custom offline package/licence/DRM pipeline handles plaintext data
+# keys and predates the canonical access policy.  It stays unavailable unless an
+# operator deliberately enables it after reviewing the deployment and clients.
+CUSTOM_OFFLINE_DRM_ENABLED = config(
+    "CUSTOM_OFFLINE_DRM_ENABLED",
+    cast=bool,
+    default=False,
+)
 
 # RECOMMENDER SETTINGS
 RECOMMEND_CACHE_TTL = config('RECOMMEND_CACHE_TTL', cast=int, default=600)
@@ -406,23 +448,98 @@ CACHE_TTL_SECONDS = config("ACCESS_CACHE_TTL_SECONDS", cast=int, default=30)
 USER_CACHE_SET_PREFIX = config("USER_ACCESS_KEY_SET_PREFIX", cast=str,
                                default="user_access_keys")  # redis set name prefix
 
-OPENAI_API_KEY = config("OPENAI_API_KEY")
-AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY")
+OPENAI_API_KEY = config("OPENAI_API_KEY", default="")
+AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID", default="")
+AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY", default="")
 AWS_REGION = config("AWS_REGION", default="us-east-1")
-MEDIA_BUCKET = config("AWS_STORAGE_BUCKET_NAME")
+MEDIA_BUCKET = config("AWS_STORAGE_BUCKET_NAME", default="")
+AWS_STORAGE_BUCKET_NAME = MEDIA_BUCKET
 AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", cast=str, default=AWS_REGION)
 AWS_S3_ENDPOINT_URL = config("AWS_S3_ENDPOINT_URL", cast=str, default="https://s3.amazonaws.com")
 AWS_S3_CUSTOM_DOMAIN = f"{AWS_S3_REGION_NAME}.{AWS_S3_ENDPOINT_URL}"
 
 # CLOUD FRONT
-CLOUDFRONT_DOMAIN = config("CLOUDFRONT_DOMAIN", cast=str, default="http://localhost:3000")
-CLOUDFRONT_KEY_PAIR_ID = config("CLOUDFRONT_KEY_PAIR_ID", cast=str, default="<key_pair_id>")
-CLOUDFRONT_PRIVATE_KEY = config("CLOUDFRONT_PRIVATE_KEY", cast=str, default="<key_pair_secret>")
+CLOUDFRONT_DOMAIN = config("CLOUDFRONT_DOMAIN", cast=str, default="")
+CLOUDFRONT_COOKIE_DOMAIN = config("CLOUDFRONT_COOKIE_DOMAIN", cast=str, default="")
+CLOUDFRONT_KEY_PAIR_ID = config("CLOUDFRONT_KEY_PAIR_ID", cast=str, default="")
+CLOUDFRONT_PRIVATE_KEY = config("CLOUDFRONT_PRIVATE_KEY", cast=str, default="")
 CLOUDFRONT_COOKIE_TTL = config("CLOUDFRONT_COOKIE_TTL", cast=int, default=900)
 CLOUDFRONT_SIGN_CACHE_TIMEOUT_MARGIN = config("CLOUDFRONT_SIGN_CACHE_TIMEOUT_MARGIN", cast=int, default=60)
 PRESIGN_EXPIRES_SECONDS = config("PRESIGN_EXPIRES_SECONDS", cast=int, default=3600)
-PRESIGN_PREVIEW_EXPIRES_SECONDS = config("PRESIGN_EXPIRES_SECONDS", cast=int, default=600)
+PRESIGN_PREVIEW_EXPIRES_SECONDS = config("PRESIGN_PREVIEW_EXPIRES_SECONDS", cast=int, default=600)
+
+# Canonical media provider selection/configuration.  Development and tests keep
+# provider clients dormant; production validates the complete Cloudflare profile.
+MEDIA_STORAGE_PROVIDER = config("MEDIA_STORAGE_PROVIDER", default="local")
+IMAGE_PLATFORM_PROVIDER = config("IMAGE_PLATFORM_PROVIDER", default="disabled")
+VIDEO_PLATFORM_PROVIDER = config("VIDEO_PLATFORM_PROVIDER", default="disabled")
+
+CLOUDFLARE_ACCOUNT_ID = config("CLOUDFLARE_ACCOUNT_ID", default="")
+CLOUDFLARE_API_TOKEN = config("CLOUDFLARE_API_TOKEN", default="")
+R2_ACCESS_KEY_ID = config("R2_ACCESS_KEY_ID", default="")
+R2_SECRET_ACCESS_KEY = config("R2_SECRET_ACCESS_KEY", default="")
+R2_PRIVATE_BUCKET_NAME = config("R2_PRIVATE_BUCKET_NAME", default="")
+R2_PUBLIC_BUCKET_NAME = config("R2_PUBLIC_BUCKET_NAME", default="")
+R2_PUBLIC_BASE_URL = config("R2_PUBLIC_BASE_URL", default="")
+MEDIA_FILEFIELD_R2_CUTOVER_CONFIRMED = config(
+    "MEDIA_FILEFIELD_R2_CUTOVER_CONFIRMED",
+    cast=bool,
+    default=False,
+)
+CLOUDFLARE_IMAGES_ACCOUNT_HASH = config(
+    "CLOUDFLARE_IMAGES_ACCOUNT_HASH",
+    default="",
+)
+CLOUDFLARE_IMAGES_SIGNING_KEY = config(
+    "CLOUDFLARE_IMAGES_SIGNING_KEY",
+    default="",
+)
+CLOUDFLARE_STREAM_CUSTOMER_CODE = config(
+    "CLOUDFLARE_STREAM_CUSTOMER_CODE",
+    default="",
+)
+CLOUDFLARE_STREAM_SIGNING_KEY_ID = config(
+    "CLOUDFLARE_STREAM_SIGNING_KEY_ID",
+    default="",
+)
+CLOUDFLARE_STREAM_SIGNING_PRIVATE_KEY_B64 = config(
+    "CLOUDFLARE_STREAM_SIGNING_PRIVATE_KEY_B64",
+    default="",
+)
+CLOUDFLARE_STREAM_WEBHOOK_SECRET = config(
+    "CLOUDFLARE_STREAM_WEBHOOK_SECRET",
+    default="",
+)
+MEDIA_UPLOAD_URL_TTL_SECONDS = config(
+    "MEDIA_UPLOAD_URL_TTL_SECONDS",
+    cast=int,
+    default=600,
+)
+MEDIA_PRIVATE_URL_TTL_SECONDS = config(
+    "MEDIA_PRIVATE_URL_TTL_SECONDS",
+    cast=int,
+    default=600,
+)
+MEDIA_UPLOAD_MAX_BYTES = config(
+    "MEDIA_UPLOAD_MAX_BYTES",
+    cast=int,
+    default=5 * 1024 * 1024 * 1024,
+)
+MEDIA_UPLOAD_MAX_DURATION_SECONDS = config(
+    "MEDIA_UPLOAD_MAX_DURATION_SECONDS",
+    cast=int,
+    default=36_000,
+)
+MEDIA_UPLOAD_ALLOWED_ORIGINS = tuple(
+    origin.strip().rstrip("/")
+    for origin in config("MEDIA_UPLOAD_ALLOWED_ORIGINS", default="").split(",")
+    if origin.strip()
+)
+CLOUDFLARE_STREAM_ALLOWED_ORIGINS = tuple(
+    origin.strip().lower().rstrip(".")
+    for origin in config("CLOUDFLARE_STREAM_ALLOWED_ORIGINS", default="").split(",")
+    if origin.strip()
+)
 
 ACCESS_CACHE_TTL_SECONDS = config("ACCESS_CACHE_TTL_SECONDS", cast=int, default=30)
 USER_ACCESS_KEY_SET_PREFIX = config("USER_ACCESS_KEY_SET_PREFIX", cast=str, default="user_access_keys")

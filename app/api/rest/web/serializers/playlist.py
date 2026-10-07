@@ -9,7 +9,7 @@ from apps.media.models import PlayList
 
 class PlayListModelSerializer(serializers.ModelSerializer):
     image = ImageModelSerializer(source="get_image", read_only=True)
-    items = EpisodeDetailSerializer(many=True)
+    items = EpisodeDetailSerializer(source="get_discoverable_episodes", many=True)
     type = serializers.CharField(source="get_type")
     is_liked = serializers.SerializerMethodField("get_is_liked")
     reactions = PostReactionSerializer(source="get_reactions", many=True)
@@ -20,9 +20,18 @@ class PlayListModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = PlayList
         fields = (
-            "id", "timestamp", "description", "duration", "raw_duration",
-            "type", "image", "items", "name",
-            "is_liked", "reactions", "my_reaction"
+            "id",
+            "timestamp",
+            "description",
+            "duration",
+            "raw_duration",
+            "type",
+            "image",
+            "items",
+            "name",
+            "is_liked",
+            "reactions",
+            "my_reaction",
         )
         read_only_fields = ("items",)
 
@@ -37,8 +46,8 @@ class PlayListModelSerializer(serializers.ModelSerializer):
         if not request.user.is_authenticated:
             return None
         return PostReactionSerializer(
-            obj.get_my_reaction(request.user),
-            context={"request": request}).data
+            obj.get_my_reaction(request.user), context={"request": request}
+        ).data
 
     def update(self, instance, validated_data):
         instance.name = validated_data.get("name", instance.name)
@@ -62,7 +71,9 @@ class PlaylistUserCreateSerializer(serializers.ModelSerializer):
         # If you want a deterministic naming convention, build it here
         title = title or f"user_playlist_{playlist.pk or 'new'}"
         with transaction.atomic():
-            return Image.objects.create_for_model(type(playlist), playlist.pk, file=file_obj, title=title)
+            return Image.objects.create_for_model(
+                type(playlist), playlist.pk, file=file_obj, title=title
+            )
 
     def create(self, validated_data):
         file_obj = validated_data.pop("file", None)

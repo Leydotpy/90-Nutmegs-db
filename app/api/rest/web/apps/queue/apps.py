@@ -1,8 +1,6 @@
+from core.application import AppConfig
 from django.urls import path
 from django.utils.translation import gettext_lazy as _
-
-
-from core.application import AppConfig
 
 
 class QueueWebAPIConfig(AppConfig):
@@ -15,9 +13,7 @@ class QueueWebAPIConfig(AppConfig):
 
     # pylint: disable=attribute-defined-outside-init
     def ready(self):
-        from api.rest.web.apps.queue.views import (
-            QueueViewSet
-        )
+        from api.rest.web.apps.queue.views import QueueViewSet
 
         # --- ViewSet Action Mappings ---
 
@@ -56,7 +52,7 @@ class QueueWebAPIConfig(AppConfig):
             path("", self.queue_list, name="queue"),
             path("add/", self.queue_add_item, name="queue-add"),
             path("clear/", self.queue_clear_items, name="queue-clear"),
-            path("<int:episode_id>/remove/", self.remove_from_queue, name="queue-item-remove"),
+            path("<uuid:episode_id>/remove/", self.remove_from_queue, name="queue-item-remove"),
 
         ]
         return self.post_process_urls(urls)

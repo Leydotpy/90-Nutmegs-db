@@ -1,25 +1,34 @@
 # ------------------------
 # ViewSets
 # ------------------------
+from apps.media.audio.models import Audio
+from apps.media.images.models import Image
+from apps.posts.podcasts.models import Episode, Podcast, Season
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import status
-from rest_framework import viewsets, filters
-from rest_framework.decorators import action, throttle_classes
-from rest_framework.generics import get_object_or_404
-from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from drf_spectacular.utils import extend_schema
+from rest_framework import filters, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 
 from api.rest.dashboard.apps.media.audio.serializers import AudioSerializer
-from api.rest.dashboard.apps.media.images.serializers import ImageSerializer, _create_image_for_instance
-from apps.media.audio.models import Audio
-from apps.media.images.models import Image
-from apps.posts.podcasts.models import Podcast, Episode
-from .serializers import PodcastSerializer, EpisodeSerializer, PodcastModelSerializer, EpisodeModelSerializer
+from api.rest.dashboard.apps.media.images.serializers import (
+    ImageSerializer,
+    _create_image_for_instance,
+)
+
+from .serializers import (
+    EpisodeModelSerializer,
+    EpisodeSerializer,
+    PodcastModelSerializer,
+    PodcastSerializer,
+    SeasonSerializer,
+)
 
 
 class PodcastViewSet(viewsets.ModelViewSet):
@@ -40,7 +49,16 @@ class PodcastViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return Podcast.objects.prefetch_related(
-            "categories", "episodes", "countries", "competitions", "regions", "teams", "players", "matches", "subscribers"
+            "categories",
+            "episodes",
+            "seasons",
+            "countries",
+            "competitions",
+            "regions",
+            "teams",
+            "players",
+            "matches",
+            "subscribers",
         ).all()
 
     @action(
@@ -48,15 +66,43 @@ class PodcastViewSet(viewsets.ModelViewSet):
         detail=True,
         url_path="episodes",
         throttle_classes=[ScopedRateThrottle],
-        permission_classes=[IsAuthenticated],
     )
     def episodes(self, request, pk=None):
         podcast = self.get_object()
         qs = podcast.get_episodes()
         filtered = self.filter_queryset(qs)
         page = self.paginate_queryset(filtered)
-        serializer = EpisodeModelSerializer(page or filtered, many=True, context={"request": request})
-        return self.get_paginated_response(serializer.data) if page is not None else Response(serializer.data, status=status.HTTP_200_OK)
+        serializer = EpisodeModelSerializer(
+            page or filtered,
+            many=True,
+            context={"request": request},
+        )
+        return (
+            self.get_paginated_response(serializer.data)
+            if page is not None
+            else Response(serializer.data, status=status.HTTP_200_OK)
+        )
+
+    @extend_schema(
+        operation_id="dashboard_podcast_seasons_list",
+        responses=SeasonSerializer(many=True),
+    )
+    @action(
+        methods=["get"],
+        detail=True,
+        url_path="seasons",
+        throttle_classes=[ScopedRateThrottle],
+    )
+    def seasons(self, request, pk=None):
+        podcast = self.get_object()
+        seasons = podcast.get_seasons()
+        page = self.paginate_queryset(seasons)
+        serializer = SeasonSerializer(page or seasons, many=True, context={"request": request})
+        return (
+            self.get_paginated_response(serializer.data)
+            if page is not None
+            else Response(serializer.data, status=status.HTTP_200_OK)
+        )
 
 
     # @action(
@@ -69,7 +115,12 @@ class PodcastViewSet(viewsets.ModelViewSet):
     #     episode = get_object_or_404(podcast.get_episodes(), pk=episode_id)
     #     return EpisodeModelSerializer(episode, context={"request": request}).data
 
-    @action(detail=True, methods=["post"], url_path="images", parser_classes=[MultiPartParser, FormParser])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="images",
+        parser_classes=[MultiPartParser, FormParser],
+    )
     def upload_image(self, request, pk=None):
         """
         Upload a single image file for this podcast.
@@ -107,13 +158,28 @@ class PodcastViewSet(viewsets.ModelViewSet):
         ct = ContentType.objects.get_for_model(instance.__class__)
 
         # validate ownership
-        if img.content_type != ct or str(img.object_id) != str(getattr(instance, "pk")):
+        if img.content_type != ct or str(img.object_id) != str(instance.pk):
             # again, if your instance.pk is UUID and image.object_id is integer this will mismatch.
-            return Response({"detail": "image does not belong to this resource"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "image does not belong to this resource"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # safe deletion
         img.delete()
         return Response({"detail": "image deleted"}, status=status.HTTP_204_NO_CONTENT)
+
+
+class SeasonViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    serializer_class = SeasonSerializer
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter]
+    search_fields = ["title", "description", "slug", "podcast__title"]
+    ordering_fields = ["position", "number", "published_at", "created_at"]
+    filterset_fields = ["podcast"]
+
+    def get_queryset(self):
+        return Season.objects.select_related("podcast", "legacy_podcast").all()
 
 
 class EpisodeViewSet(viewsets.ModelViewSet):
@@ -127,11 +193,16 @@ class EpisodeViewSet(viewsets.ModelViewSet):
         return EpisodeSerializer
 
     def get_queryset(self):
-        return Episode.objects.prefetch_related(
+        return Episode.objects.select_related("podcast", "season").prefetch_related(
             "categories", "countries", "competitions", "regions", "teams", "players", "matches"
         ).all()
 
-    @action(detail=True, methods=["post"], url_path="images", parser_classes=[MultiPartParser, FormParser])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="images",
+        parser_classes=[MultiPartParser, FormParser],
+    )
     def upload_image(self, request, pk=None):
         """
         Upload a single image file for this podcast.
@@ -169,9 +240,12 @@ class EpisodeViewSet(viewsets.ModelViewSet):
         ct = ContentType.objects.get_for_model(instance.__class__)
 
         # validate ownership
-        if img.content_type != ct or str(img.object_id) != str(getattr(instance, "pk")):
+        if img.content_type != ct or str(img.object_id) != str(instance.pk):
             # again, if your instance.pk is UUID and image.object_id is integer this will mismatch.
-            return Response({"detail": "image does not belong to this resource"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "image does not belong to this resource"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # safe deletion
         img.delete()

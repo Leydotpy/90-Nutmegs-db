@@ -103,6 +103,8 @@ def build_offline_package_streaming(self, episode_id: str, user_id: int = None, 
       - writes package to tmp file without ever loading entire file into memory,
       - uploads package to S3 and creates OfflinePackage row storing encrypted DEK (CiphertextBlob).
     """
+    if not getattr(settings, "CUSTOM_OFFLINE_DRM_ENABLED", False):
+        raise RuntimeError("Offline packaging is disabled")
 
     tmpdir = tempfile.mkdtemp(prefix=f"offline-{episode_id}-")
     try:
@@ -238,6 +240,11 @@ def build_offline_package_task(self, job_id: str):
     except Packaging.DoesNotExist:
         logger.error("PackagingJob not found: %s", job_id)
         return {"status": "unknown"}
+
+    if not getattr(settings, "CUSTOM_OFFLINE_DRM_ENABLED", False):
+        logger.warning("Rejected disabled offline packaging job %s", job_id)
+        job.mark_failed("Offline packaging is disabled")
+        return {"status": "disabled"}
 
     job.mark_running(task_id=self.request.id)
     try:

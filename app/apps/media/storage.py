@@ -1,11 +1,11 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from urllib.parse import parse_qs, urlsplit
 
 import boto3
 from botocore.exceptions import ClientError
 from botocore.signers import CloudFrontSigner
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from django.conf import settings
 from django.core.files.storage import default_storage
@@ -20,6 +20,22 @@ s3 = boto3.client(
 BUCKET = getattr(settings, "MEDIA_BUCKET")  # e.g. "my-podcast-bucket"
 
 logger = logging.getLogger(__name__)
+
+
+def _has_expiring_signature(url: str) -> bool:
+    """Recognize the signed-query contracts used by supported legacy stores."""
+
+    query_keys = {
+        key.lower()
+        for key in parse_qs(urlsplit(url).query, keep_blank_values=True)
+    }
+    supported_pairs = (
+        {"x-amz-signature", "x-amz-expires"},
+        {"x-goog-signature", "x-goog-expires"},
+        {"signature", "expires"},
+        {"sig", "se"},
+    )
+    return any(pair <= query_keys for pair in supported_pairs)
 
 
 def cleanup_storage_keys(keys: list):
@@ -75,18 +91,28 @@ def generate_presigned_put_url(key, expires_in=3600, content_type=None):
         return None
 
 
-def generate_presigned_url_for_name(storage, name: str, expires_in: int = 3600):
+def generate_presigned_url_for_name(
+    storage,
+    name: str,
+    expires_in: int = 3600,
+    *,
+    allow_public: bool = False,
+):
     """
-    Return a presigned GET URL for `name` using a django-storages S3 backend if possible,
-    otherwise fall back to storage.url(name) if available.
+    Return a short-lived GET capability for ``name`` when possible.
+
+    Queryless/public storage URLs are returned only when the caller explicitly
+    proves that public delivery is allowed. Protected stream/download callers
+    therefore fail closed on a backend that cannot issue an expiring URL.
     """
     try:
         public_url = storage.url(name)
     except Exception:
         public_url = None
 
-    # If URL looks public (no query params) return it
-    if public_url and ("?" not in public_url):
+    # Some storage backends already sign storage.url(). Keep only recognizable
+    # expiry-bound capabilities; an arbitrary tracking query is still public.
+    if public_url and _has_expiring_signature(public_url):
         return public_url
 
     backend_cls_name = storage.__class__.__name__
@@ -114,10 +140,10 @@ def generate_presigned_url_for_name(storage, name: str, expires_in: int = 3600):
             return url
         except Exception as exc:
             logger.exception("Failed to generate presigned URL via boto3: %s", exc)
-            return public_url
+            return public_url if allow_public else None
 
-    # Non-S3 backend: return public_url (if present) or None
-    return public_url
+    # Non-S3/public backends are only valid for intentionally public objects.
+    return public_url if allow_public else None
 
 
 def _rsa_signer(private_key_pem: str, message: bytes) -> bytes:
@@ -140,7 +166,7 @@ def generate_cloudfront_signed_cookies(resource_url: str, key_pair_id: str, priv
     cookies keys are: 'CloudFront-Policy', 'CloudFront-Signature', 'CloudFront-Key-Pair-Id'
     """
 
-    expires = datetime.utcnow() + timedelta(seconds=expires_in_seconds)
+    expires = datetime.now(timezone.utc) + timedelta(seconds=expires_in_seconds)
     # Build a canned policy for this resource
     policy = (
             '{"Statement":[{"Resource":"%s","Condition":{"DateLessThan":{"AWS:EpochTime":%d}}}]}' % (resource_url,

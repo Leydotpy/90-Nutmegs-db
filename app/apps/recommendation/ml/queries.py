@@ -95,7 +95,7 @@ def get_ann_recommendation(request):
         return cached
     ids = ann_recommend_for_user(request.user.id, top_k=12)
     episodes = list(
-        Episode.objects.filter(id__in=ids)
+        Episode.objects.discoverable().filter(id__in=ids)
         .select_related("podcast")
         .prefetch_related("categories")
     )

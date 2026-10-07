@@ -7,37 +7,26 @@ requires-python = ">=3.14"
 dependencies = [
     "babel",
     "celery[redis]",
-    "celery-types>=0.24.0",
     "clerk-backend-api",
-    "django>=5.2.7",
+    "cryptography",
+    "django>=5.2.7,<6.0",
     "django-celery-beat",
-    "django-clerk-sdk>=1.0.0",
+    "django-clerk-sdk>=1.0.0,<2.0",
     "django-cors-headers",
     "django-filter",
     "django-guardian",
     "djangorestframework>=3.16.1",
-    "djangorestframework-stubs>=3.16.6",
     "ffmpeg-python",
     "httpx",
-    "numpy>=2.3.5",
-    "pandas>=2.3.3",
     "pillow",
     "python-decouple",
     "redis",
+    "requests",
     "django-celery-results>=2.6.0",
-    "openai>=2.16.0",
-    "google-cloud-speech>=2.36.0",
-    "google-cloud-storage>=3.9.0",
     "boto3>=1.42.41",
     "python-multipart>=0.0.22",
-    "whisper-openai>=1.0.0",
-    "torch>=2.10.0",
     "prometheus-client>=0.24.1",
     "django-redis>=6.0.0",
-    "scipy>=1.17.0",
-    "scikit-learn>=1.8.0",
-    "joblib>=1.5.3",
-    "faiss-cpu>=1.13.2",
     "honcho>=2.0.0",
     "channels>=4.3.2",
     "channels-redis>=4.3.0",
@@ -46,6 +35,61 @@ dependencies = [
     "psycopg[binary,pool]>=3.3.2",
     "drf-spectacular>=0.29.0",
     "drf-spectacular-sidecar>=2026.1.1",
-    "django-rest-framework>=0.1.0",
     "dj-database-url>=3.1.2",
+    "pycflare[storages,media] @ git+https://github.com/Leydotpy/pycflare.git@f214c80de3843d47f0593386a60169c77e8bc801",
 ]
+
+[project.optional-dependencies]
+media-workers = [
+    "google-cloud-speech>=2.36.0",
+    "google-cloud-storage>=3.9.0",
+    "openai>=2.16.0",
+    "torch>=2.10.0",
+    "whisper-openai>=1.0.0",
+]
+recommendation-workers = [
+    "faiss-cpu>=1.13.2",
+    "joblib>=1.5.3",
+    "numpy>=2.3.5",
+    "pandas>=2.3.3",
+    "scikit-learn>=1.8.0",
+    "scipy>=1.17.0",
+]
+dev = [
+    "celery-types>=0.24.0",
+    "coverage[toml]>=7.10.0",
+    "djangorestframework-stubs>=3.16.6",
+    "mypy>=1.17.0",
+    "pip-audit>=2.9.0",
+    "ruff>=0.12.0",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["app"]
+omit = [
+    "app/manage.py",
+    "app/*/migrations/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.14"
+check_untyped_defs = true
+ignore_missing_imports = true
+warn_unused_ignores = true
+mypy_path = "app"
+
+[[tool.mypy.overrides]]
+module = ["apps.media.canonical"]
+ignore_errors = true

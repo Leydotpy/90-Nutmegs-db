@@ -16,12 +16,15 @@ Including another URLconf
 """
 from django.apps import apps
 from django.conf import settings
-from django.contrib import admin
-from django.urls import path, include
 from django.conf.urls.static import static
+from django.contrib import admin
+from django.urls import include, path
 
+from conf.health import liveness, readiness
 
 urlpatterns = [
+    path("health/live/", liveness, name="health-live"),
+    path("health/ready/", readiness, name="health-ready"),
     path("admin/", admin.site.urls),
     path("api/", include(apps.get_app_config("api").urls[0]))
 ]

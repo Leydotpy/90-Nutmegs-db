@@ -7,6 +7,7 @@ from apps.posts.podcasts.queries import (trending_episodes, new_releases, editor
                                top_playlists, personalized_recommendations, trending_podcasts)
 from api.rest.web.apps.podcasts.serializers import EpisodeListSerializer, PodcastListSerializer
 from api.rest.web.serializers.category import CategorySerializer
+from api.rest.web.serializers.explore import ExploreResponseSerializer
 from api.rest.web.serializers.playlist import PlayListModelSerializer
 
 from apps.category.models import Category
@@ -15,6 +16,7 @@ CACHE_TTL = 30  # seconds; tune per your needs
 
 class ExploreAPIView(GenericAPIView):
     permission_classes = (AllowAny,)
+    serializer_class = ExploreResponseSerializer
 
     def _build_payload(self, request):
         user = request.user if request.user.is_authenticated else None

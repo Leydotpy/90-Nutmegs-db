@@ -1,18 +1,20 @@
+from apps.memberships.access import AccessService
+from apps.memberships.policies import AccessAction
+from apps.posts.models import PostReaction
+from apps.posts.podcasts.models import Episode, PlayBack, Podcast, Season
+from apps.promotions.models import AutomaticPostList, HandPickedPostList
+from apps.promotions.models import Image as PromotionImage
 from django.apps import apps
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
+from utils.utils import get_client_ip
 
 from api.rest.fields import TagsField
 from api.rest.web.serializers.auth import UserDisplaySerializer
 from api.rest.web.serializers.comments import CommentDetailSerializer
 from api.rest.web.serializers.media import ImageModelSerializer
-from apps.memberships.access import AccessService
-from apps.posts.models import PostReaction
-from apps.posts.podcasts.models import Podcast, Episode, PlayBack
-from apps.promotions.models import AutomaticPostList, HandPickedPostList, Image as PromotionImage
-from utils.utils import get_client_ip
 
 
 class AppLabel(models.TextChoices):
@@ -40,8 +42,24 @@ class PodcastListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Podcast
         fields = (
-            "id", "title", "subtitle", "duration", "structure", "type", "tags", "raw_duration",
-            "description", "slug", "timestamp", "is_liked", "image",
+            "id",
+            "title",
+            "subtitle",
+            "duration",
+            "structure",
+            "type",
+            "tags",
+            "raw_duration",
+            "description",
+            "slug",
+            "status",
+            "explicit_content",
+            "language",
+            "website_url",
+            "published_at",
+            "timestamp",
+            "is_liked",
+            "image",
         )
 
     def get_type(self, obj):
@@ -52,8 +70,22 @@ class PodcastListSerializer(serializers.ModelSerializer):
         user = getattr(request, "user", None)
         if user and user.is_authenticated:
             # Assuming check_is_liked is defined on BasePost or a Mixin
-            return getattr(obj, 'check_is_liked', lambda u: False)(user)
+            return getattr(obj, "check_is_liked", lambda u: False)(user)
         return False
+
+
+class SeasonListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Season
+        fields = (
+            "id",
+            "title",
+            "slug",
+            "number",
+            "position",
+            "description",
+            "published_at",
+        )
 
 
 class EpisodeListSerializer(serializers.ModelSerializer):
@@ -64,20 +96,33 @@ class EpisodeListSerializer(serializers.ModelSerializer):
     raw_duration = serializers.IntegerField(source="get_raw_duration", read_only=True)
     hosts = TagsField(read_only=True, render_as_list=False)
     tags = TagsField(read_only=True, render_as_list=False)
+    season = SeasonListSerializer(read_only=True)
 
     class Meta:
         model = Episode
         fields = (
             "id",
+            "season",
             "title",
             "subtitle",
             "slug",
+            "episode_number",
+            "episode_type",
+            "explicit_content",
+            "duration_seconds",
             "type",
             "timestamp",
             "is_liked",
             "description",
             "exclusive",
             "public_release_date",
+            "status",
+            "visibility",
+            "premium_available_at",
+            "public_available_at",
+            "required_plan",
+            "preview_duration_seconds",
+            "published_at",
             "hosts",
             "tags",
             "raw_duration",
@@ -121,24 +166,37 @@ class EpisodeDetailSerializer(EpisodeListSerializer):
         if request is None or not request.user.is_authenticated:
             return None
         return PostReactionSerializer(
-            obj.get_my_reaction(request.user),
-            context={"request": request}).data
+            obj.get_my_reaction(request.user), context={"request": request}
+        ).data
 
     def get_user_has_subscribed(self, obj):
         request = self.context.get("request")
         if request is None or not request.user.is_authenticated:
             return False
-        return obj.user_has_subscribed(request.user) or obj.podcast.user_has_subscribed(request.user)
+        return obj.user_has_subscribed(request.user) or obj.podcast.user_has_subscribed(
+            request.user
+        )
 
     def get_user_has_access(self, obj):
-        return AccessService().has_access(
-            self.context["request"].user,
-            obj
+        return (
+            AccessService.get_instance()
+            .evaluate(
+                user=self.context["request"].user,
+                resource=obj,
+                action=AccessAction.STREAM,
+            )
+            .allowed
         )
 
     def get_downloadable(self, obj):
-        return obj.is_downloadable_by(
-            user=self.context["request"].user
+        return (
+            AccessService.get_instance()
+            .evaluate(
+                user=self.context["request"].user,
+                resource=obj,
+                action=AccessAction.DOWNLOAD,
+            )
+            .allowed
         )
 
 
@@ -147,10 +205,11 @@ class PodcastDetailSerializer(PodcastListSerializer):
     Extends ListSerializer to add detailed fields.
     Expects 'paginated_episodes' in context for the episodes list.
     """
+
     comments = CommentDetailSerializer(source="get_comments", many=True, read_only=True)
     seasons = serializers.SerializerMethodField()
     episodes = serializers.SerializerMethodField()
-    subscriptions = UserDisplaySerializer(source="subscribers", many=True, read_only=True)
+    subscriber_count = serializers.SerializerMethodField()
     parent = PodcastListSerializer(read_only=True)
 
     # Additional fields
@@ -160,15 +219,26 @@ class PodcastDetailSerializer(PodcastListSerializer):
 
     class Meta(PodcastListSerializer.Meta):
         fields = PodcastListSerializer.Meta.fields + (
-            "episodes", "seasons", "reactions", "my_reaction",
-            "comments", "subscriptions", "parent", "user_has_subscribed"
+            "episodes",
+            "seasons",
+            "reactions",
+            "my_reaction",
+            "comments",
+            "subscriber_count",
+            "parent",
+            "user_has_subscribed",
         )
 
+    def get_subscriber_count(self, obj) -> int:
+        """Expose aggregate social proof without leaking follower identities."""
+
+        return obj.subscribers.count()
+
     def get_seasons(self, obj):
-        """Returns serialized children (seasons) if they exist."""
-        seasons = obj.get_seasons()
+        """Return canonical Seasons while legacy child rows remain internal."""
+        seasons = obj.get_seasons().published()
         if seasons.exists():
-            return PodcastListSerializer(seasons, many=True, context=self.context).data
+            return SeasonListSerializer(seasons, many=True, context=self.context).data
         return None
 
     def get_episodes(self, obj):
@@ -176,7 +246,7 @@ class PodcastDetailSerializer(PodcastListSerializer):
         Returns the paginated episodes dictionary passed from the View.
         This avoids putting pagination logic inside the serializer.
         """
-        return self.context.get('paginated_episodes')
+        return self.context.get("paginated_episodes")
 
     def get_my_reaction(self, obj):
         request = self.context.get("request")
@@ -212,11 +282,20 @@ class AutomaticPodcastPromotionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AutomaticPostList
-        fields = ("name", "description", "subtitle", "text", "url", "items",)
+        fields = (
+            "name",
+            "description",
+            "subtitle",
+            "text",
+            "url",
+            "items",
+        )
 
     def get_items(self, obj: AutomaticPostList):
         user = self.context["request"].user
-        return EpisodeDetailSerializer(obj.get_objects(user=user), many=True, context=self.context).data
+        return EpisodeDetailSerializer(
+            obj.get_objects(user=user), many=True, context=self.context
+        ).data
 
 
 class PromotionSerializer(serializers.Serializer):
@@ -231,7 +310,7 @@ class PromotionSerializer(serializers.Serializer):
 class ImageBannerPromotionSerializer(serializers.ModelSerializer):
     resource_id = serializers.CharField(source="pk", read_only=True)
     url = serializers.URLField(source="banner_url")
-    podcast_id = serializers.UUIDField(source="podcast_id", read_only=True)
+    podcast_id = serializers.UUIDField(read_only=True)
 
     class Meta:
         model = PromotionImage
@@ -261,8 +340,8 @@ class SubscribeSerializer(serializers.Serializer):
             raise serializers.ValidationError("Please login to subscribe")
         try:
             model = apps.get_model(attrs["app_label"])
-        except Exception as e:
-            raise serializers.ValidationError(str(e))
+        except Exception as exc:
+            raise serializers.ValidationError(str(exc)) from exc
         self._model = get_object_or_404(model, id=attrs["item_id"])
         return attrs
 
@@ -271,7 +350,7 @@ class SubscribeSerializer(serializers.Serializer):
         return self.context["request"].user
 
     def create(self, validated_data):
-        is_subscribed = getattr(self._model, 'toggle_subscription')(self.user)
+        is_subscribed = self._model.toggle_subscription(self.user)
         return {"is_subscribed": is_subscribed}
 
 
@@ -289,12 +368,12 @@ class PlayBackModelSerializer(serializers.ModelSerializer):
             "last_played_at",
             "percentage_completed",
             "remaining_minutes",
-            "episode"
+            "episode",
         )
 
 
 class PlayBackUpdateSerializer(serializers.Serializer):
-    seconds = serializers.IntegerField(required=True)
+    seconds = serializers.IntegerField(required=True, min_value=0)
     is_completed = serializers.BooleanField(default=False)
 
     @property
@@ -313,6 +392,6 @@ class PlayBackUpdateSerializer(serializers.Serializer):
             seconds=validated_data["seconds"],
             is_completed=validated_data["is_completed"],
             episode_id=instance.id,
-            ip_address=get_client_ip(request=self.request)
+            ip_address=get_client_ip(request=self.request),
         )
         return {"success": True, "seconds": playback.current_timestamp}

@@ -157,3 +157,9 @@ class RefreshPromotionStatusSerializer(serializers.Serializer):
 
     promotion = ImagePromotionSerializer(read_only=True)
     remote = GiffyJobStatusSerializer(read_only=True)
+
+
+class GiffyCallbackDetailSerializer(serializers.Serializer):
+    """Response envelope returned by the signed Giffy callback endpoint."""
+
+    detail = serializers.CharField()

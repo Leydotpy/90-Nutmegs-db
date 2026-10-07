@@ -24,13 +24,27 @@ def merge_anon_queue_to_user(sender, user, request, **kwargs):
     with transaction.atomic():
         user_q, _ = Queue.objects.select_for_update().get_or_create(owner=user)
         # move items across, skipping duplicates
-        existing_episode_ids = set(user_q.items.values_list("episode_id", flat=True))
+        existing_track_ids = set(user_q.items.values_list("track_id", flat=True))
+        anon_items = list(
+            anon_q.items.order_by("position", "added_at", "pk")
+        )
+        new_items = [
+            item for item in anon_items if item.track_id not in existing_track_ids
+        ]
+        positions = user_q._calculate_positions(len(new_items))
         to_move = []
-        for item in anon_q.items.all().order_by("order", "added_at"):
-            if item.episode_id in existing_episode_ids:
+        for item, position in zip(new_items, positions):
+            if item.track_id in existing_track_ids:
                 continue
             to_move.append(
-                QueueItem(queue=user_q, episode_id=item.episode_id, added_at=item.added_at, order=item.order))
+                QueueItem(
+                    queue=user_q,
+                    track_id=item.track_id,
+                    position=position,
+                    order=position,
+                )
+            )
+            existing_track_ids.add(item.track_id)
         if to_move:
             QueueItem.objects.bulk_create(to_move)
             user_q.touch()

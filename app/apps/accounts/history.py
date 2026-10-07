@@ -4,7 +4,6 @@ from django.conf import settings
 
 from apps.posts.podcasts.models import Podcast
 
-
 # Podcast = apps.get_model("podcasts.Podcast")
 
 
@@ -26,7 +25,11 @@ class UserHistoryManager:
         ids = cls.extract(request)
 
         # Reordering as the ID order gets messed up in the query
-        podcast_dict = Podcast.objects.browsable().in_bulk(ids)
+        podcast_dict = {
+            str(podcast_id): podcast
+            for podcast_id, podcast in Podcast.objects.discoverable().in_bulk(ids).items()
+        }
+        ids = [str(podcast_id) for podcast_id in ids]
         ids.reverse()
 
         return [
@@ -57,6 +60,8 @@ class UserHistoryManager:
         """
         Add a new product ID to the list of product IDs
         """
+        ids = [str(item_id) for item_id in ids]
+        new_id = str(new_id)
         if new_id in ids:
             ids.remove(new_id)
         ids.append(new_id)
@@ -75,4 +80,3 @@ class UserHistoryManager:
         response.set_cookie(
             cls.cookie_name, json.dumps(updated_ids), **cls.cookie_kwargs
         )
-        print("response cookies after set in signals ==>", response.cookies)

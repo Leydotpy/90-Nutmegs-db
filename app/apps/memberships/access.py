@@ -1,12 +1,14 @@
+"""Compatibility facade and short-lived cache for canonical access policy."""
+
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.db import models
 from django.utils import timezone
 
-from .models import Entitlement, Subscription
+from .models import Entitlement
+from .policies import AccessAction, AccessPolicy, access_policy
 
-# Try to get a raw Redis connection via django-redis if available for set ops.
 try:
     from django_redis import get_redis_connection
 
@@ -14,33 +16,50 @@ try:
 except Exception:
     _have_redis = False
 
+
 CACHE_TTL_SECONDS = getattr(settings, "ACCESS_CACHE_TTL_SECONDS", 30)
-USER_CACHE_SET_PREFIX = getattr(settings, "USER_ACCESS_KEY_SET_PREFIX", "user_access_keys")  # redis set name prefix
+USER_CACHE_SET_PREFIX = getattr(settings, "USER_ACCESS_KEY_SET_PREFIX", "user_access_keys")
 
 
-def get_user_highest_active_subscription(user):
-    # if not user or not getattr(user, "is_authenticated", False):
-    #     return None
-    # uses SubscriptionManager.active_for_user
-    return (Subscription.objects.active_for_user(user).
-            select_related("membership__plan").
-            order_by('-membership__plan__tier').first())
+def get_user_highest_active_subscription(user, *, now=None):
+    """Compatibility selector using the policy's transitional state semantics."""
+
+    if not user or not getattr(user, "is_authenticated", False):
+        return None
+    subscription, _ = AccessPolicy._current_subscription(
+        user,
+        now or timezone.now(),
+    )
+    return subscription
 
 
-def has_entitlement(user, content_obj):
+def has_entitlement(user, content_obj, *, now=None):
+    """Compatibility helper for a valid direct entitlement to an actual object."""
+
     if not user or not getattr(user, "is_authenticated", False):
         return False
-    ct = ContentType.objects.get_for_model(type(content_obj))
-    now = timezone.now()
-    return Entitlement.objects.filter(
-        user=user,
-        content_type=ct,
-        object_id=str(getattr(content_obj, "pk", getattr(content_obj, "id", None))),
-        revoked=False
-    ).filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=now)).exists()
+    now = now or timezone.now()
+    content_type = ContentType.objects.get_for_model(content_obj)
+    return (
+        Entitlement.objects.filter(
+            user=user,
+            content_type=content_type,
+            object_id=str(content_obj.pk),
+            revoked=False,
+        )
+        .filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=now))
+        .exists()
+    )
 
 
 class AccessService:
+    """Backwards-compatible Boolean API around :class:`AccessPolicy`.
+
+    New callers should consume ``evaluate`` and its structured decision.  The
+    legacy ``has_access`` method remains while serializers/permissions migrate.
+    Cache failures are treated as misses and can never create an allow result.
+    """
+
     _instance = None
 
     @classmethod
@@ -49,39 +68,139 @@ class AccessService:
             cls._instance = cls()
         return cls._instance
 
-    def __init__(self, cache_backend=cache, ttl=CACHE_TTL_SECONDS):
+    def __init__(
+        self,
+        cache_backend=cache,
+        ttl=CACHE_TTL_SECONDS,
+        policy: AccessPolicy | None = None,
+    ):
         self.cache = cache_backend
         self.ttl = ttl
-        # redis connection if available
-        self._redis = get_redis_connection("default") if _have_redis else None
+        self.policy = policy or access_policy
+        self._redis = None
+        if _have_redis:
+            try:
+                self._redis = get_redis_connection("default")
+            except NotImplementedError, ValueError:
+                self._redis = None
 
-    # canonical cache key pattern: access:user:<pk|anon>:<app_label.model>:<obj_pk>
     @staticmethod
-    def _cache_key(user, obj):
-        user_key = f"user:{user.pk}" if (user and getattr(user, "is_authenticated", False)) else "user:anon"
-        return f"access:{user_key}:{obj._meta.label_lower}:{obj.pk}"
+    def _cache_key(user, obj, action=AccessAction.STREAM):
+        action = AccessAction(action)
+        if user and getattr(user, "is_authenticated", False):
+            user_key = f"user:{user.pk}"
+        else:
+            user_key = "user:anon"
+        return (
+            f"access:{AccessPolicy.VERSION}:{user_key}:"
+            f"{obj._meta.label_lower}:{obj.pk}:{action.value}"
+        )
 
     @staticmethod
     def _user_set_key(user):
         return f"{USER_CACHE_SET_PREFIX}:{user.pk}"
 
+    def evaluate(self, *, user, resource, action=AccessAction.STREAM, now=None):
+        """Evaluate without making cached state authoritative.
+
+        Explicit ``now`` is passed through for deterministic jobs/tests.  The
+        structured decision deliberately is not cached because it contains live
+        model instances and expiry metadata.
+        """
+
+        return self.policy.evaluate(
+            user=user,
+            resource=resource,
+            action=action,
+            now=now,
+        )
+
+    def evaluate_media(
+        self,
+        *,
+        user,
+        resource,
+        variant,
+        action=AccessAction.STREAM,
+        now=None,
+    ):
+        """Return an uncached decision bound to one exact canonical media variant."""
+
+        return self.policy.evaluate_media(
+            user=user,
+            resource=resource,
+            variant=variant,
+            action=action,
+            now=now,
+        )
+
+    def has_access(self, user, obj, action=AccessAction.STREAM):
+        """Return the legacy Boolean result using an action/version-safe key."""
+
+        action = AccessAction(action)
+        key = self._cache_key(user, obj, action)
+        try:
+            cached = self.cache.get(key)
+        except Exception:
+            cached = None
+        if cached is not None:
+            return bool(cached)
+
+        decision = self.evaluate(user=user, resource=obj, action=action)
+        try:
+            self.cache.set(key, bool(decision.allowed), timeout=self.ttl)
+            self._register_cache_key_for_user(user, key)
+        except Exception:
+            pass
+        return decision.allowed
+
+    def invalidate_user_cache(self, user):
+        """Clear all cached actions for a user's commercial-state change."""
+
+        self._clear_keys_for_user(user)
+
+    def invalidate_user_obj(self, user, obj):
+        """Clear all cached policy actions for one user/resource pair."""
+
+        for action in AccessAction:
+            key = self._cache_key(user, obj, action)
+            try:
+                self.cache.delete(key)
+            except Exception:
+                pass
+            self._unregister_cache_key_for_user(user, key)
+
     def _register_cache_key_for_user(self, user, key):
         if not user or not getattr(user, "is_authenticated", False):
-            # do not register anon keys
             return
         if self._redis:
             try:
                 self._redis.sadd(self._user_set_key(user), key)
             except Exception:
                 pass
-        else:
-            # Fallback: keep a small list in Django cache (less ideal, but works)
-            list_key = f"{self._user_set_key(user)}:list"
-            existing = self.cache.get(list_key) or []
-            if key not in existing:
-                existing.append(key)
-                # keep for a short time longer than entries TTL
-                self.cache.set(list_key, existing, timeout=self.ttl * 3)
+            return
+
+        list_key = f"{self._user_set_key(user)}:list"
+        existing = self.cache.get(list_key) or []
+        if key not in existing:
+            existing.append(key)
+            self.cache.set(list_key, existing, timeout=self.ttl * 3)
+
+    def _unregister_cache_key_for_user(self, user, key):
+        if not user or not getattr(user, "is_authenticated", False):
+            return
+        if self._redis:
+            try:
+                self._redis.srem(self._user_set_key(user), key)
+            except Exception:
+                pass
+            return
+
+        list_key = f"{self._user_set_key(user)}:list"
+        existing = self.cache.get(list_key) or []
+        if key in existing:
+            existing.remove(key)
+            self.cache.set(list_key, existing, timeout=self.ttl * 3)
 
     def _get_keys_for_user(self, user):
         if not user or not getattr(user, "is_authenticated", False):
@@ -89,130 +208,23 @@ class AccessService:
         if self._redis:
             try:
                 keys = self._redis.smembers(self._user_set_key(user))
-                # smembers returns bytes -> decode to str
-                return [k.decode() if isinstance(k, bytes) else k for k in keys]
+                return [key.decode() if isinstance(key, bytes) else key for key in keys]
             except Exception:
                 return []
-        else:
-            list_key = f"{self._user_set_key(user)}:list"
-            return self.cache.get(list_key) or []
+        return self.cache.get(f"{self._user_set_key(user)}:list") or []
 
     def _clear_keys_for_user(self, user):
-        keys = self._get_keys_for_user(user)
-        for k in keys:
+        for key in self._get_keys_for_user(user):
             try:
-                self.cache.delete(k)
+                self.cache.delete(key)
             except Exception:
                 pass
-        # also delete the index (set/list)
+        if not user or not getattr(user, "is_authenticated", False):
+            return
         if self._redis:
             try:
                 self._redis.delete(self._user_set_key(user))
             except Exception:
                 pass
         else:
-            list_key = f"{self._user_set_key(user)}:list"
-            self.cache.delete(list_key)
-
-    # Public API
-    def has_access(self, user, obj):
-        key = self._cache_key(user, obj)
-        val = self.cache.get(key)
-        if val is not None:
-            return bool(val)
-
-        result = self._compute_has_access(user, obj)
-        # register and set cache
-        # store boolean (1/0)
-        self.cache.set(key, bool(result), timeout=self.ttl)
-        # register key for user so we can invalidate later
-        try:
-            self._register_cache_key_for_user(user, key)
-        except Exception:
-            pass
-        return result
-
-    def invalidate_user_cache(self, user):
-        """Clear all cached access results for a given user (use in signals)."""
-        self._clear_keys_for_user(user)
-
-    # You can expose more fine-grained invalidation if needed
-    def invalidate_user_obj(self, user, obj):
-        key = self._cache_key(user, obj)
-        self.cache.delete(key)
-        # Also remove it from the user's key set
-        if self._redis:
-            try:
-                self._redis.srem(self._user_set_key(user), key)
-            except Exception:
-                pass
-        else:
-            list_key = f"{self._user_set_key(user)}:list"
-            existing = self.cache.get(list_key) or []
-            if key in existing:
-                existing.remove(key)
-                self.cache.set(list_key, existing, timeout=self.ttl * 3)
-
-    # -------------------------
-    # Core access evaluation
-    # -------------------------
-    @staticmethod
-    def _compute_has_access(user, obj):
-        """
-        Implement the same ordered checks we designed earlier:
-          1. admin bypass
-          2. Episode.availability for public/non-exclusive
-          3. subscription plan fast-path (Episode.available_for(plan=...))
-          4. plan-targeted entitlements -> treat as virtual plan
-          5. object-level entitlements
-          6. category -> plan fallback
-        """
-        now = timezone.now()
-
-        # Avoid circular imports at module top
-        from .models import Plan, Entitlement
-
-        # 1. admin bypass
-        if user and (getattr(user, "is_staff", False) or getattr(user, "is_superuser", False)):
-            return True
-
-        # 2. quick Episode public check
-        # if isinstance(obj, Episode):
-            # Episode.available_for(plan=None) returns True for public accessible episodes
-        if obj.available_for(plan=None, now=now):
-            return True
-
-        # 3. subscription fast-path
-        sub = get_user_highest_active_subscription(user)
-        plan = None
-        if sub:
-            plan = sub.membership.plan
-            # if isinstance(obj, Episode):
-            if obj.available_for(plan=plan, now=now):
-                return True
-            # else:
-            #     if plan.grants(*features):
-            #         return True
-
-        # 4. plan-targeted entitlements
-        plan_ct = ContentType.objects.get_for_model(Plan)
-        plan_ent_qs = Entitlement.objects.filter(
-            user=user, content_type=plan_ct, revoked=False
-        ).filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=now))
-
-        for ent in plan_ent_qs.select_related("content_type"):
-            p = ent.content_object
-            if not p:
-                continue
-            #if isinstance(obj, Episode):
-            if obj.available_for(plan=p, now=now):
-                return True
-            # else:
-            #     if p.grants(*features):
-            #         return True
-
-        # 5. object-level entitlement
-        obj_ct = ContentType.objects.get_for_model(type(obj))
-        if has_entitlement(user, obj_ct):
-            return True
-        return False
+            self.cache.delete(f"{self._user_set_key(user)}:list")

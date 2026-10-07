@@ -1,10 +1,11 @@
 import datetime
 import uuid
+from typing import Optional
 
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
@@ -187,11 +188,22 @@ class SubscriptionManager(models.Manager):
         if not user or not user.is_authenticated:
             return self.none()
         now = timezone.now()
-        # find active subscriptions via membership -> user
-        return self.filter(
-            membership__user=user,
-            status=Subscription.Status.ACTIVE
-        ).filter(models.Q(end_date__isnull=True) | models.Q(end_date__gt=now))
+        # A canceled row with a future end date is a durable
+        # cancel-at-period-end state and remains paid through that boundary.
+        return self.filter(membership__user=user).filter(
+            models.Q(
+                status=Subscription.Status.ACTIVE,
+                end_date__isnull=True,
+            )
+            | models.Q(
+                status=Subscription.Status.ACTIVE,
+                end_date__gt=now,
+            )
+            | models.Q(
+                status=Subscription.Status.CANCELED,
+                end_date__gt=now,
+            )
+        )
 
 
 class Subscription(models.Model):
@@ -228,20 +240,51 @@ class Subscription(models.Model):
 
     def is_active(self) -> bool:
         now = timezone.now()
-        if self.status != Subscription.Status.ACTIVE:
-            return False
-        if self.end_date and self.end_date <= now:
-            return False
-        return True
+        if self.status == Subscription.Status.ACTIVE:
+            return self.end_date is None or self.end_date > now
+        if self.status == Subscription.Status.CANCELED:
+            return bool(self.end_date and self.end_date > now)
+        return False
 
-    def cancel(self, when: datetime.datetime = None):
-        """Cancel at period end (if auto_renew) or immediately."""
-        if when is None:
-            when = timezone.now()
-        if self.auto_renew:
-            # set the end date to when the current cycle ends (placeholder behaviour)
-            self.end_date = when
-        else:
-            self.status = Subscription.Status.CANCELED
-            self.end_date = when
-            self.save(update_fields=['status', 'end_date'])
+    def cancel(self, when: Optional[datetime.datetime] = None):
+        """Persist a replay-safe cancellation using existing durable fields.
+
+        Renewing subscriptions become ``CANCELED`` but retain a future
+        ``end_date`` as their paid-through boundary. A fixed-term ACTIVE row
+        (``auto_renew=False``) is distinguishable from that scheduled state and
+        cancels immediately, replacing its natural end with ``when``/now.
+        """
+        if self.pk is None:
+            raise ValueError("A subscription must be saved before it can be canceled.")
+
+        with transaction.atomic():
+            current = (
+                Subscription.objects.select_for_update()
+                .only("status", "active", "auto_renew", "end_date")
+                .get(pk=self.pk)
+            )
+            self.status = current.status
+            self.active = current.active
+            self.auto_renew = current.auto_renew
+            self.end_date = current.end_date
+            if current.status in {self.Status.CANCELED, self.Status.EXPIRED}:
+                return self
+
+            effective_end = when or timezone.now()
+            current.status = Subscription.Status.CANCELED
+            current.end_date = effective_end
+            if current.auto_renew:
+                # CANCELED + future end_date is the durable scheduled state.
+                # The canonical access policy continues access through it.
+                current.auto_renew = False
+                update_fields = ["status", "auto_renew", "end_date"]
+            else:
+                # ACTIVE + non-renewing is a natural fixed-term state. Its
+                # cancellation takes effect at ``effective_end`` immediately.
+                update_fields = ["status", "end_date"]
+            current.save(update_fields=update_fields)
+            self.status = current.status
+            self.active = current.active
+            self.auto_renew = current.auto_renew
+            self.end_date = current.end_date
+        return self

@@ -3,16 +3,14 @@ import uuid
 from decimal import Decimal
 from uuid import uuid4
 
-from django.conf import settings
-from django.db import models
-
-from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
-
-from apps.billing import bankcards
 from core.compat import get_user_model
 from core.utils import get_default_currency
+from django.db import models, transaction
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from templatetags.currency_filters import currency
+
+from apps.billing import bankcards
 
 User = get_user_model()
 
@@ -71,13 +69,54 @@ class Transaction(models.Model):
         ]
 
     def mark_completed(self, completed_at: datetime.datetime = None):
-        self.status = Transaction.Status.COMPLETED
-        self.completed_at = completed_at or timezone.now()
-        self.save(update_fields=["status", "completed_at"])
+        if self.pk is None:
+            raise ValueError("A transaction must be saved before it can complete.")
+
+        with transaction.atomic():
+            current = (
+                Transaction.objects.select_for_update()
+                .only("status", "completed_at")
+                .get(pk=self.pk)
+            )
+            self.status = current.status
+            self.completed_at = current.completed_at
+            if current.status == Transaction.Status.COMPLETED:
+                return self
+            if current.status != Transaction.Status.PENDING:
+                raise ValueError(
+                    f"Cannot complete a transaction in {current.status!r} status."
+                )
+
+            current.status = Transaction.Status.COMPLETED
+            current.completed_at = completed_at or timezone.now()
+            current.save(update_fields=["status", "completed_at"])
+            self.status = current.status
+            self.completed_at = current.completed_at
+        return self
 
     def mark_refunded(self):
-        self.status = Transaction.Status.REFUNDED
-        self.save(update_fields=["status"])
+        if self.pk is None:
+            raise ValueError("A transaction must be saved before it can be refunded.")
+
+        with transaction.atomic():
+            current = (
+                Transaction.objects.select_for_update()
+                .only("status", "completed_at")
+                .get(pk=self.pk)
+            )
+            self.status = current.status
+            self.completed_at = current.completed_at
+            if current.status == Transaction.Status.REFUNDED:
+                return self
+            if current.status != Transaction.Status.COMPLETED:
+                raise ValueError(
+                    f"Cannot refund a transaction in {current.status!r} status."
+                )
+
+            current.status = Transaction.Status.REFUNDED
+            current.save(update_fields=["status"])
+            self.status = current.status
+        return self
 
 
 class Source(models.Model):
@@ -152,10 +191,17 @@ class Source(models.Model):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         if self.deferred_txns:
-            for txn in self.deferred_txns:
-                self._create_transaction(*txn)
+            deferred_txns = self.deferred_txns
+            self.deferred_txns = []
+            try:
+                with transaction.atomic():
+                    for txn in deferred_txns:
+                        self._create_transaction(*txn)
+            except Exception:
+                self.deferred_txns = deferred_txns
+                raise
 
-    def create_deferred_transaction(self, txn_type, amount, reference="", status=""):
+    def create_deferred_transaction(self, txn_type, amount, reference="", status=None):
         """
         Register the data for a transaction that can't be created yet due to FK
         constraints.  This happens at checkout where create an payment source
@@ -165,46 +211,74 @@ class Source(models.Model):
             self.deferred_txns = []
         self.deferred_txns.append((txn_type, amount, reference, status))
 
-    def _create_transaction(self, txn_type, amount, reference="", status=""):
-        self.transactions.create(
-            txn_type=txn_type, amount=amount, reference=reference, status=status
-        )
+    def _create_transaction(self, txn_type, amount, reference="", status=None):
+        transaction_fields = {
+            "txn_type": txn_type,
+            "amount": amount,
+            "reference": reference,
+        }
+        if status:
+            if status not in Transaction.Status.values:
+                raise ValueError(f"Unknown transaction status: {status!r}.")
+            transaction_fields["status"] = status
+        return self.transactions.create(**transaction_fields)
+
+    @staticmethod
+    def _positive_amount(amount):
+        amount = Decimal(str(amount))
+        if amount <= Decimal("0.00"):
+            raise ValueError("Payment amounts must be greater than zero.")
+        return amount
 
     # =======
     # Actions
     # =======
 
-    def allocate(self, amount, reference="", status=""):
+    def allocate(self, amount, reference="", status=None):
         """
         Convenience method for ring-fencing money against this source
         """
-        self.amount_allocated += amount
-        self.save()
-        self._create_transaction(
-            Transaction.AUTHORISE, amount, reference, status
-        )
+        amount = self._positive_amount(amount)
+        with transaction.atomic():
+            self.amount_allocated += amount
+            self.save(update_fields=["amount_allocated"])
+            return self._create_transaction(
+                Transaction.AUTHORISE, amount, reference, status
+            )
 
     allocate.alters_data = True
 
-    def debit(self, amount=None, reference="", status=""):
+    def debit(self, amount=None, reference="", status=None):
         """
         Convenience method for recording debits against this source
         """
         if amount is None:
             amount = self.balance
-        self.amount_debited += amount
-        self.save()
-        self._create_transaction(Transaction.DEBIT, amount, reference, status)
+        amount = self._positive_amount(amount)
+        if amount > self.balance:
+            raise ValueError("Cannot debit more than the available balance.")
+        with transaction.atomic():
+            self.amount_debited += amount
+            self.save(update_fields=["amount_debited"])
+            return self._create_transaction(
+                Transaction.DEBIT, amount, reference, status
+            )
 
     debit.alters_data = True
 
-    def refund(self, amount, reference="", status=""):
+    def refund(self, amount, reference="", status=None):
         """
         Convenience method for recording refunds against this source
         """
-        self.amount_refunded += amount
-        self.save()
-        self._create_transaction(Transaction.REFUND, amount, reference, status)
+        amount = self._positive_amount(amount)
+        if amount > self.amount_available_for_refund:
+            raise ValueError("Cannot refund more than the amount available for refund.")
+        with transaction.atomic():
+            self.amount_refunded += amount
+            self.save(update_fields=["amount_refunded"])
+            return self._create_transaction(
+                Transaction.REFUND, amount, reference, status
+            )
 
     refund.alters_data = True
 

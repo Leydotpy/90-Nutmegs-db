@@ -1,8 +1,7 @@
-from django.urls import path, include
+from core.application import AppConfig
+from django.urls import include, path
 from django.utils.translation import gettext_lazy as _
 from rest_framework import routers
-
-from core.application import AppConfig
 
 
 class PodcastDashboardConfig(AppConfig):
@@ -15,10 +14,15 @@ class PodcastDashboardConfig(AppConfig):
         self._router = None
 
     def ready(self):
-        from api.rest.dashboard.apps.podcasts.views import PodcastViewSet, EpisodeViewSet
+        from api.rest.dashboard.apps.podcasts.views import (
+            EpisodeViewSet,
+            PodcastViewSet,
+            SeasonViewSet,
+        )
         self._router = routers.DefaultRouter()
-        self._router.register(r"", PodcastViewSet, basename="podcasts")
+        self._router.register(r"seasons", SeasonViewSet, basename="season")
         self._router.register(r"episodes", EpisodeViewSet, basename="episode")
+        self._router.register(r"", PodcastViewSet, basename="podcasts")
 
     def get_urls(self):
         urls = [

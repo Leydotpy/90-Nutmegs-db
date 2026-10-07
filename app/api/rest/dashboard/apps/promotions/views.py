@@ -7,16 +7,29 @@ import json
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.utils.dateparse import parse_datetime
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from api.rest.dashboard.apps.promotions.serializers import GiffyJobStatusSerializer, ImagePromotionSerializer, ImagePromotionWriteSerializer
+from api.rest.dashboard.apps.promotions.serializers import (
+    GiffyCallbackDetailSerializer,
+    GiffyJobStatusSerializer,
+    ImagePromotionSerializer,
+    ImagePromotionWriteSerializer,
+)
 from apps.promotions.client import GiffyClient, GiffyClientError
 from apps.promotions.models import BannerSyncStatus, Image
-from apps.promotions.signing import verify_signed_webhook
+from apps.promotions.signing import (
+    CHECKSUM_HEADER,
+    CLIENT_HEADER,
+    SIGNATURE_HEADER,
+    TIMESTAMP_HEADER,
+    verify_signed_webhook,
+)
 
 
 def _apply_remote_status(instance: Image, payload: dict) -> None:
@@ -82,6 +95,46 @@ class GiffyCallbackAPIView(APIView):
     authentication_classes = []
     permission_classes = [permissions.AllowAny]
 
+    @extend_schema(
+        request=GiffyJobStatusSerializer,
+        parameters=[
+            OpenApiParameter(
+                CLIENT_HEADER,
+                OpenApiTypes.STR,
+                location=OpenApiParameter.HEADER,
+                required=True,
+                description="Configured service client identifier.",
+            ),
+            OpenApiParameter(
+                TIMESTAMP_HEADER,
+                OpenApiTypes.INT,
+                location=OpenApiParameter.HEADER,
+                required=True,
+                description="Unix timestamp covered by the webhook signature.",
+            ),
+            OpenApiParameter(
+                CHECKSUM_HEADER,
+                OpenApiTypes.STR,
+                location=OpenApiParameter.HEADER,
+                required=True,
+                description="Hex SHA-256 digest of the exact request body.",
+            ),
+            OpenApiParameter(
+                SIGNATURE_HEADER,
+                OpenApiTypes.STR,
+                location=OpenApiParameter.HEADER,
+                required=True,
+                description="HMAC signature over the canonical webhook request.",
+            ),
+        ],
+        responses={
+            200: GiffyCallbackDetailSerializer,
+            400: GiffyCallbackDetailSerializer,
+            403: GiffyCallbackDetailSerializer,
+            404: GiffyCallbackDetailSerializer,
+        },
+        auth=[],
+    )
     def post(self, request, *args, **kwargs):
         if not verify_signed_webhook(
             payload=request.body,

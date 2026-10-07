@@ -8,11 +8,12 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
-from django.utils.translation import gettext_lazy as _, pgettext_lazy
+from django.utils.translation import gettext_lazy as _
+from django.utils.translation import pgettext_lazy
+from utils.generic_relations import normalize_generic_object_id
 
 from apps.fields import ExtendedURLField
 from apps.posts.podcasts.models import Episode, Podcast
-from utils.generic_relations import normalize_generic_object_id
 
 
 class BannerProvider(models.TextChoices):
@@ -88,7 +89,9 @@ class LinkedPromotion(models.Model):
     content_object = fields.GenericForeignKey()
 
     # Position identifies the slot where the promotion should appear.
-    position = models.CharField(_("Position"), max_length=100, help_text=_("The position on the page."))
+    position = models.CharField(
+        _("Position"), max_length=100, help_text=_("The position on the page.")
+    )
     # Display order controls deterministic ordering inside the placement slot.
     display_order = models.PositiveIntegerField(_("Display Order"), default=0)
     # Clicks provide a lightweight engagement counter for editorial reporting.
@@ -179,7 +182,9 @@ class AbstractPromotion(models.Model):
         object_id = normalize_generic_object_id(self.pk)
         ctype = self.content_type
         page_count = PagePromotion.objects.filter(content_type=ctype, object_id=object_id).count()
-        keyword_count = KeywordPromotion.objects.filter(content_type=ctype, object_id=object_id).count()
+        keyword_count = KeywordPromotion.objects.filter(
+            content_type=ctype, object_id=object_id
+        ).count()
         return page_count + keyword_count
 
 
@@ -188,6 +193,13 @@ class ImagePromotionQuerySet(models.QuerySet):
 
     def ready(self):
         return self.filter(banner_status=BannerSyncStatus.READY).exclude(banner_url="")
+
+    def discoverable(self, *, now=None):
+        discoverable_podcasts = Podcast.objects.discoverable(now=now).values("pk")
+        return self.filter(
+            models.Q(podcast__isnull=True)
+            | models.Q(podcast_id__in=discoverable_podcasts)
+        )
 
     def failed(self):
         return self.filter(banner_status=BannerSyncStatus.FAILED)
@@ -207,6 +219,9 @@ class ImagePromotionManager(models.Manager):
 
     def ready(self):
         return self.get_queryset().ready()
+
+    def discoverable(self, *, now=None):
+        return self.get_queryset().discoverable(now=now)
 
     def failed(self):
         return self.get_queryset().failed()
@@ -347,7 +362,9 @@ class Image(AbstractPromotion):
             "banner_position": self.banner_position,
         }
 
-    def mark_banner_submitted(self, *, job_id, source_filename: str = "", source_content_type: str = ""):
+    def mark_banner_submitted(
+        self, *, job_id, source_filename: str = "", source_content_type: str = ""
+    ):
         """Mark the promotion as successfully queued with the remote banner service."""
         self.banner_job_id = job_id
         self.banner_status = BannerSyncStatus.QUEUED
@@ -475,7 +492,9 @@ class HandPickedPostList(AbstractPostList):
     )
 
     def get_queryset(self):
-        return self.podcasts.order_by("orderedpodcast__display_order")
+        return Podcast.objects.discoverable().filter(
+            orderedpodcast__list=self,
+        ).order_by("orderedpodcast__display_order")
 
     def get_ordered_podcasts(self):
         return self.get_queryset()
@@ -499,7 +518,9 @@ class OrderedPodcast(models.Model):
         app_label = "promotions"
         ordering = ("display_order",)
         constraints = [
-            models.UniqueConstraint(fields=["list", "podcast"], name="unique_ordered_podcast_in_list"),
+            models.UniqueConstraint(
+                fields=["list", "podcast"], name="unique_ordered_podcast_in_list"
+            ),
         ]
         verbose_name = _("Ordered podcast")
         verbose_name_plural = _("Ordered podcast")
@@ -521,12 +542,19 @@ class AutomaticPostList(AbstractPostList):
     def get_queryset(self, user: User):
         """Return the current automatic episode selection for the supplied user."""
         if self.method == self.Method.RECENTLY_ADDED:
-            return Episode.objects.select_related("podcast").order_by("-timestamp")[: self.num_posts]
+            return (
+                Episode.objects.discoverable()
+                .select_related("podcast")
+                .order_by("-timestamp")[: self.num_posts]
+            )
 
         if self.method == self.Method.SUBSCRIPTIONS and user.is_authenticated:
-            subscribed_podcast_ids = Podcast.objects.filter(subscribers=user).values_list("id", flat=True)
+            subscribed_podcast_ids = Podcast.objects.filter(subscribers=user).values_list(
+                "id", flat=True
+            )
             return (
-                Episode.objects.select_related("podcast")
+                Episode.objects.discoverable()
+                .select_related("podcast")
                 .filter(podcast_id__in=subscribed_podcast_ids)
                 .order_by("-timestamp")[: self.num_posts]
             )

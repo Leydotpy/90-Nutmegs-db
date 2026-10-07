@@ -1,11 +1,16 @@
+from apps.queue.models import Queue
+from apps.queue.utils import get_or_create_queue_for_request
 from django.db import transaction
-from rest_framework import viewsets, status
+from django.http import Http404
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from api.rest.web.apps.queue.serializers import QueueItemSerializer, QueueModelSerializer, QueueAddItemSerializer
-from apps.queue.models import Queue
-from apps.queue.utils import get_or_create_queue_for_request
+from api.rest.web.apps.queue.serializers import (
+    QueueAddItemSerializer,
+    QueueItemSerializer,
+    QueueModelSerializer,
+)
 
 
 class QueueViewSet(viewsets.ModelViewSet):
@@ -15,7 +20,7 @@ class QueueViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         q = get_or_create_queue_for_request(request)
         q.touch()
-        items = q.items.all()
+        items = q.tracks
         serializer = QueueItemSerializer(items, many=True, context=self.get_serializer_context())
         return Response({"tracks": serializer.data, "last_activity": q.last_activity})
 
@@ -46,24 +51,22 @@ class QueueViewSet(viewsets.ModelViewSet):
                 # 4. Touch updated timestamp
                 queue.touch()
 
-        except Exception as e:
-            # Handle specific exceptions (like ItemNotFound) gracefully here
+        except (Http404, ValueError) as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         # 5. Return the updated queue items or just a success message
         # Returning the updated list allows the frontend to update immediately
-        items = queue.items.all().order_by('position')
+        items = queue.tracks
         return Response(
             QueueItemSerializer(items, many=True, context=self.get_serializer_context()).data,
             status=status.HTTP_201_CREATED
         )
 
     @action(detail=False, methods=["delete"])
-    def remove(self, request):
+    def remove(self, request, *args, **kwargs):
         q = get_or_create_queue_for_request(request)
-        episode_id = self.kwargs.get("episode_id")
-        # episode_id = request.data.get("episode_id")
-        deleted, _ = q.items.filter(episode_id=episode_id).delete()
+        episode_id = kwargs.get("episode_id")
+        deleted, _ = q.items.filter(track_id=episode_id).delete()
         q.touch()
         return Response({"deleted": deleted})
 
