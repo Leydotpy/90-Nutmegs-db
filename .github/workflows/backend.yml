@@ -1,0 +1,156 @@
+name: Backend quality gates
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  django:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Install web/test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install uv
+          uv sync --locked --extra dev
+
+      - name: Validate installed dependency graph
+        run: uv run --locked python -m pip check
+
+      - name: Compile Python source
+        run: uv run --locked python -m compileall -q app
+
+      - name: Check foundation formatting
+        run: >-
+          uv run --locked ruff format --check
+          app/apps/media/canonical.py
+          app/apps/media/migrations/0002_mediaasset_medialocation_mediavariant.py
+          app/apps/media/providers
+          app/apps/media/upload_intents.py
+          app/apps/media/upload_finalization.py
+          app/apps/media/delivery_service.py
+          app/apps/media/test_upload_intents.py
+          app/apps/media/test_upload_finalization.py
+          app/apps/media/test_delivery_service.py
+          app/apps/media/tests.py
+          app/apps/memberships/policies.py
+          app/apps/memberships/tests.py
+          app/apps/posts/podcasts/migrations/0002_episode_publication_access.py
+          app/apps/posts/podcasts/services.py
+          app/apps/posts/podcasts/test_publication_migration.py
+          app/apps/posts/podcasts/tests.py
+          app/apps/queue/tests.py
+          app/apps/billing/tests.py
+          app/api/rest/web/apps/media/offline/tests.py
+          app/api/rest/web/apps/media/streaming/tests.py
+          app/api/rest/web/apps/podcasts/tests.py
+          app/api/rest/dashboard/apps/podcasts/tests.py
+          app/conf/settings/production.py
+          app/conf/tests.py
+
+      - name: Gate new foundation code with Ruff
+        run: >-
+          uv run --locked ruff check
+          app/apps/media/canonical.py
+          app/apps/media/migrations/0002_mediaasset_medialocation_mediavariant.py
+          app/apps/media/providers
+          app/apps/media/upload_intents.py
+          app/apps/media/upload_finalization.py
+          app/apps/media/delivery_service.py
+          app/apps/media/test_upload_intents.py
+          app/apps/media/test_upload_finalization.py
+          app/apps/media/test_delivery_service.py
+          app/apps/media/tests.py
+          app/apps/memberships/policies.py
+          app/apps/memberships/tests.py
+          app/apps/posts/podcasts/migrations/0002_episode_publication_access.py
+          app/apps/posts/podcasts/services.py
+          app/apps/posts/podcasts/test_publication_migration.py
+          app/apps/posts/podcasts/tests.py
+          app/apps/queue/tests.py
+          app/apps/billing/tests.py
+          app/api/rest/web/apps/media/offline/serializers.py
+          app/api/rest/web/apps/media/offline/tests.py
+          app/api/rest/web/apps/media/streaming/tests.py
+          app/api/rest/web/apps/podcasts/tests.py
+          app/api/rest/dashboard/apps/podcasts/tests.py
+          app/conf/settings/production.py
+          app/conf/tests.py
+
+      - name: Type-check provider boundary
+        run: >-
+          uv run --locked mypy
+          app/apps/media/providers/contracts.py
+          app/apps/media/providers/config.py
+          app/apps/media/providers/cloudflare.py
+          app/apps/media/upload_intents.py
+          app/apps/media/upload_finalization.py
+          app/apps/media/delivery_service.py
+
+      - name: Run Django checks
+        run: uv run --locked python app/manage.py check --settings=conf.settings.test
+
+      - name: Smoke-check production app startup
+        env:
+          DJANGO_SECRET_KEY: ci-only-production-smoke-secret-with-more-than-fifty-characters
+          DJANGO_ALLOWED_HOSTS: example.test
+          DATABASE_URL: postgresql://sanfootball:ci-only@db.example.test/sanfootball
+          REDIS_URL: redis://cache.example.test:6379/1
+          CELERY_BROKER_URL: redis://cache.example.test:6379/2
+          CLERK_SECRET_KEY: ci-only-clerk-secret
+          CLERK_AUTH_PARTIES: https://app.example.test
+          GIFFY_SHARED_SECRET: ci-only-giffy-shared-secret-with-more-than-thirty-two-characters
+          CLOUDFLARE_ACCOUNT_ID: ci-account
+          CLOUDFLARE_API_TOKEN: ci-api-token
+          R2_ACCESS_KEY_ID: ci-r2-access
+          R2_SECRET_ACCESS_KEY: ci-r2-secret
+          R2_PRIVATE_BUCKET_NAME: ci-private-media
+          R2_PUBLIC_BUCKET_NAME: ci-public-media
+          MEDIA_FILEFIELD_R2_CUTOVER_CONFIRMED: "true"
+          R2_PUBLIC_BASE_URL: https://media.example.test
+          CLOUDFLARE_IMAGES_ACCOUNT_HASH: ci-images-hash
+          CLOUDFLARE_IMAGES_SIGNING_KEY: ci-images-signing-key
+          CLOUDFLARE_STREAM_CUSTOMER_CODE: ci-stream-code
+          CLOUDFLARE_STREAM_SIGNING_KEY_ID: ci-stream-key
+          CLOUDFLARE_STREAM_WEBHOOK_SECRET: ci-stream-webhook-secret
+          MEDIA_UPLOAD_ALLOWED_ORIGINS: https://app.example.test
+          CLOUDFLARE_STREAM_ALLOWED_ORIGINS: app.example.test
+        run: |
+          CLOUDFLARE_STREAM_SIGNING_PRIVATE_KEY_B64="$(uv run --locked python -c 'import base64; from cryptography.hazmat.primitives.asymmetric import rsa; from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat; key = rsa.generate_private_key(public_exponent=65537, key_size=2048); print(base64.b64encode(key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())).decode())')"
+          export CLOUDFLARE_STREAM_SIGNING_PRIVATE_KEY_B64
+          uv run --locked python app/manage.py check --deploy --settings=conf.settings.production
+
+      - name: Reject model/migration drift
+        run: uv run --locked python app/manage.py makemigrations --check --dry-run --settings=conf.settings.test
+
+      - name: Generate OpenAPI schema
+        run: uv run --locked python app/manage.py spectacular --settings=conf.settings.test --file /tmp/openapi.yaml
+
+      - name: Audit locked production dependencies
+        run: |
+          uv export --locked --no-dev --no-emit-project --no-editable --no-hashes --quiet --output-file /tmp/audit-requirements.txt
+          uv run --locked pip-audit --requirement /tmp/audit-requirements.txt --no-deps --disable-pip --progress-spinner off
+
+      - name: Run complete discovered suite with coverage
+        run: |
+          uv run --locked coverage run app/manage.py test --settings=conf.settings.test --verbosity=1
+          uv run --locked coverage report --fail-under=50
+          uv run --locked coverage xml
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: coverage.xml
