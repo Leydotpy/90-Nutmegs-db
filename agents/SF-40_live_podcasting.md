@@ -2,7 +2,7 @@
 
 **Status owner:** `SANFOOTBALL_IMPLEMENTATION_STATUS.md`  
 **Execution mode:** one concern, human approval required before dependents  
-**Derived from:** authoritative root `AGENTS.md`
+**Derived from:** `docs/specifications/SANFOOTBALL_MASTER_SPECIFICATION.md` (authoritative master architecture/product specification)
 
 ## Objective
 
@@ -19,7 +19,7 @@ Implement a fault-tolerant live-broadcast lifecycle that can become a normal can
 
 ## Mandatory operating rules
 
-- Root `AGENTS.md` remains authoritative.
+- Root `AGENTS.md` governs execution; `docs/specifications/SANFOOTBALL_MASTER_SPECIFICATION.md` governs architecture/product requirements. Read only the master sections listed in this concern's source map by default, plus additional sections only when a material dependency, conflict, security issue, migration issue, or architecture ambiguity requires them.
 - Read `SUBAGENT_ORCHESTRATOR.md` and `SANFOOTBALL_IMPLEMENTATION_STATUS.md` before editing.
 - Work on **this concern only**.
 - Preserve user modifications and inspect git status/branch first.

@@ -1,6 +1,6 @@
 # Master Specification → Concern Map
 
-This file is a navigation aid. `AGENTS.md` remains authoritative.
+This file is a navigation aid. `docs/specifications/SANFOOTBALL_MASTER_SPECIFICATION.md` is the preserved architecture/product authority; root `AGENTS.md` governs concern execution. Codex should read the mapped master sections for the active concern rather than loading the complete master by default.
 
 | Concern | Master-spec sections |
 |---|---|

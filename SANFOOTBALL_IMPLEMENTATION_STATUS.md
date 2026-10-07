@@ -1,6 +1,6 @@
 # SANFootball Implementation Status
 
-> **Authoritative execution ledger.** This is the single repository-wide implementation-status document required by the master `AGENTS.md`. Do not create competing phase/status files.
+> **Authoritative execution ledger.** This is the single repository-wide implementation-status document required by `docs/specifications/SANFOOTBALL_MASTER_SPECIFICATION.md`. Root `AGENTS.md` governs how Codex uses it. Do not create competing phase/status files.
 
 ## Current Master Phase
 

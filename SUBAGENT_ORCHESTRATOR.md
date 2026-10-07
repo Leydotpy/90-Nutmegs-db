@@ -1,8 +1,16 @@
 # SUBAGENT_ORCHESTRATOR.md — SANFootball Controlled Codex Execution
 
-## 1. Authority
+## 1. Authority model
 
-`AGENTS.md` is the single authoritative architecture and product specification. Concern files are scoped execution instructions derived from it. If a concern file appears to conflict with `AGENTS.md`, **stop and follow `AGENTS.md`**, record the conflict in `SANFOOTBALL_IMPLEMENTATION_STATUS.md`, and do not invent a resolution that weakens security, data integrity, privacy, production infrastructure, or canonical ownership.
+The root `AGENTS.md` governs **how Codex executes work**. The complete original architecture/product specification is preserved verbatim at:
+
+```text
+docs/specifications/SANFOOTBALL_MASTER_SPECIFICATION.md
+```
+
+That preserved master governs **what SANFootball must become**. Concern files are scoped execution instructions derived from the master.
+
+If a concern appears to conflict with the preserved master, an approved ADR, or an already `APPROVED` concern, stop and record the conflict in `SANFOOTBALL_IMPLEMENTATION_STATUS.md`. Do not invent a resolution that weakens security, data integrity, privacy, production infrastructure, canonical ownership, or compatibility.
 
 ## 2. One-concern rule
 
@@ -17,7 +25,7 @@ Codex may set a concern to:
 - `IN_PROGRESS`
 - `BLOCKED`
 - `READY_FOR_REVIEW`
-- `DEFERRED` only when the user explicitly defers it or the master spec allows a documented deferral
+- `DEFERRED` only when the user explicitly defers it or the master permits a documented deferral
 
 Codex MUST NOT set its own concern to `APPROVED`. Approval is a human/reviewer action.
 
@@ -32,16 +40,21 @@ When implementation and tests for the current concern are complete, Codex MUST:
 
 Before editing code, the active concern agent MUST:
 
-1. read root `AGENTS.md` fully;
+1. obey/read root `AGENTS.md`;
 2. read this orchestrator;
 3. read `SANFOOTBALL_IMPLEMENTATION_STATUS.md`;
-4. read its own concern file;
-5. inspect git status, branch, modified/untracked files and preserve user changes;
-6. inspect relevant architecture docs/tests/models/migrations/routes/tasks/events/providers;
-7. verify its dependency concerns are `APPROVED`;
-8. verify the repository state still matches assumptions in the concern file;
-9. update its board row to `IN_PROGRESS` and record start notes;
-10. only then implement.
+4. read its own `agents/SF-XX_*.md` concern file in full;
+5. inspect `docs/SOURCE_SECTION_MAP.md` for that concern;
+6. read only the preserved master sections listed in the concern's `Master-spec source map` from `docs/specifications/SANFOOTBALL_MASTER_SPECIFICATION.md`;
+7. read extra master sections only if a concrete dependency/conflict/security/migration issue makes them necessary;
+8. inspect git status, branch, modified/untracked files and preserve user changes;
+9. inspect relevant architecture docs/tests/models/migrations/routes/tasks/events/providers;
+10. verify dependency concerns are `APPROVED`;
+11. verify repository state still matches assumptions in the concern file and approved prior work;
+12. update its board row to `IN_PROGRESS` and record start notes;
+13. only then implement.
+
+Do **not** read the entire preserved master specification by default on every concern. Targeted reading is intentional.
 
 ## 5. Required implementation loop
 
@@ -61,13 +74,15 @@ The active concern owns only its listed scope. If adjacent work is discovered:
 - if it belongs to a later concern, record it under `Next Actions`/that concern's notes and do not implement it early;
 - if it reveals a broken assumption in an already `APPROVED` concern, set the active concern to `BLOCKED`, document the regression/assumption, and ask for review rather than silently rewriting prior architecture.
 
-## 7. No-redo rule
+## 7. No-redo / approved-state rule
 
-If a requested item is already correctly implemented and verified by code/tests/data constraints, do not rewrite it for style. Mark it `VERIFIED EXISTING` in the status document and continue with the missing pieces of the same concern.
+If a requested item is already correctly implemented and verified by code/tests/data constraints or a prior approved concern, do not rewrite it for style. Mark it `VERIFIED EXISTING` where relevant and continue with missing pieces.
+
+The preserved master describes target requirements; `SANFOOTBALL_IMPLEMENTATION_STATUS.md` plus approved ADRs describe which portions have already been accepted. Do not treat old target-language as permission to undo approved work.
 
 ## 8. Required quality checks
 
-Every concern must apply relevant checks from the master specification, including:
+Every concern must apply relevant checks from the preserved master specification, including:
 
 - canonical ownership and no duplicate mutable state;
 - server-side authorization;
