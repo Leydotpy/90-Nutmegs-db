@@ -9,7 +9,7 @@ class HealthEndpointTests(TestCase):
         response = self.client.get("/health/live/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"status": "ok", "service": "sanfootball"})
+        self.assertEqual(response.json(), {"status": "ok", "service": "90Nutmegs"})
 
     def test_readiness_checks_database(self):
         response = self.client.get("/health/ready/")

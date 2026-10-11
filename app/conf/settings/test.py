@@ -16,7 +16,7 @@ DATABASES = {
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "sanfootball-tests",
+        "LOCATION": "90Nutmegs-tests",
     }
 }
 
