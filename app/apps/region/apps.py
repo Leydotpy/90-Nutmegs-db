@@ -1,13 +1,12 @@
+from django.apps import AppConfig
 from django.utils.translation import gettext_lazy as _
-from core.application import AppConfig
 
 
 class RegionConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
     name = "apps.region"
     label = "region"
     verbose_name = _("Region")
 
-    namespace = "region"
-
     def ready(self):
-        from apps.region import receivers # noqa
+        from apps.region import receivers  # noqa: F401

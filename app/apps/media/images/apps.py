@@ -1,13 +1,12 @@
+from django.apps import AppConfig
 from django.utils.translation import gettext_lazy as _
-from core.application import AppConfig
 
 
 class ImagesConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
     name = "apps.media.images"
     label = "images"
     verbose_name = _("Images")
 
-    namespace = "images"
-
     def ready(self):
-        from . import receivers # noqa
+        from . import receivers  # noqa: F401

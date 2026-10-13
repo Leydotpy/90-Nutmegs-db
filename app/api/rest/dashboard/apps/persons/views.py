@@ -1,3 +1,5 @@
+from api.rest.dashboard.audit import StaffAuditMixin
+from api.rest.dashboard.permissions import ActiveStaff
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -24,7 +26,7 @@ from .serializers import (
 )
 
 
-class PlayerViewSet(viewsets.ModelViewSet):
+class PlayerViewSet(StaffAuditMixin, viewsets.ModelViewSet):
     queryset = Player.objects.select_related("team", "region").prefetch_related(
         "fitness__injuries",
         "positions_played__position__shape__style",
@@ -32,7 +34,7 @@ class PlayerViewSet(viewsets.ModelViewSet):
         "assists"
     ).all()
     serializer_class = PlayerSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [ActiveStaff]
     filter_backends = [filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter]
     search_fields = ["name", "nickname", "team__name"]
     ordering_fields = ["name", "age", "created"]
@@ -63,7 +65,7 @@ class PlayerViewSet(viewsets.ModelViewSet):
         url_path="injury-types",
         throttle_classes=[ScopedRateThrottle],
         # throttle_scope="injury_types",
-        permission_classes=[permissions.IsAuthenticatedOrReadOnly],
+        permission_classes=[ActiveStaff],
     )
     def injury_types(self, request):
         if request.method == "GET":
@@ -100,7 +102,7 @@ class PlayerViewSet(viewsets.ModelViewSet):
         url_path="fitness",
         throttle_classes=[ScopedRateThrottle],
         # throttle_scope="player_fitness_write",
-        permission_classes=[permissions.IsAuthenticatedOrReadOnly],
+        permission_classes=[ActiveStaff],
     )
     def fitness(self, request, pk=None):
         player = self.get_object()
@@ -163,7 +165,7 @@ class PlayerViewSet(viewsets.ModelViewSet):
         url_path="injuries",
         throttle_classes=[ScopedRateThrottle],
         # throttle_scope="player_injuries_read",
-        permission_classes=[permissions.IsAuthenticatedOrReadOnly],
+        permission_classes=[ActiveStaff],
     )
     def injuries(self, request, pk=None):
         player = self.get_object()
@@ -228,7 +230,7 @@ class PlayerViewSet(viewsets.ModelViewSet):
         url_path=r"injuries/(?P<injury_pk>[^/.]+)",
         throttle_classes=[ScopedRateThrottle],
         # throttle_scope="player_injuries_write",
-        permission_classes=[permissions.IsAuthenticatedOrReadOnly],
+        permission_classes=[ActiveStaff],
     )
     def injury_detail(self, request, pk=None, injury_pk=None):
         player = self.get_object()
@@ -283,7 +285,7 @@ class PlayerViewSet(viewsets.ModelViewSet):
         url_path="transfers",
         throttle_classes=[ScopedRateThrottle],
         # throttle_scope="player_injuries_write",
-        permission_classes=[permissions.IsAuthenticatedOrReadOnly],
+        permission_classes=[ActiveStaff],
     )
     def transfers(self, request, pk=None):
         player = self.get_object()
@@ -325,7 +327,7 @@ class PlayerViewSet(viewsets.ModelViewSet):
         url_path=r"transfer/(?P<transfer_pk>[^/.]+)",
         throttle_classes=[ScopedRateThrottle],
         # throttle_scope="player_injuries_write",
-        permission_classes=[permissions.IsAuthenticatedOrReadOnly],
+        permission_classes=[ActiveStaff],
     )
     def contract(self, request, pk=None, transfer_pk=None):
         player = self.get_object()
@@ -344,9 +346,9 @@ class PlayerViewSet(viewsets.ModelViewSet):
         return Response(PlayerTransferSerializer(transfer).data)
 
 
-class StaffViewSet(viewsets.ModelViewSet):
+class StaffViewSet(StaffAuditMixin, viewsets.ModelViewSet):
     queryset = Staff.objects.select_related("team", "region").all()
     serializer_class = StaffSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [ActiveStaff]
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ["name", "job"]

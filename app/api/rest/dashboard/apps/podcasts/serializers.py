@@ -45,7 +45,6 @@ from api.rest.dashboard.apps.region.serializers import (
     RegionSerializer,
     TeamModelSerializer,
 )
-from api.rest.web.serializers.auth import UserDisplaySerializer
 
 
 # ------------------------
@@ -203,7 +202,6 @@ class PodcastSerializer(serializers.ModelSerializer):
             "matches",
             "view_count",
             "subscriber_count",
-            "subscribers",
             "timestamp",
             "updated",
         ]
@@ -212,7 +210,6 @@ class PodcastSerializer(serializers.ModelSerializer):
             "slug",
             "view_count",
             "subscriber_count",
-            "subscribers",
             "timestamp",
             "updated",
         ]
@@ -233,17 +230,12 @@ class PodcastSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {"parent": "A child Podcast must have a parent Podcast."}
                 )
-            if (
-                parent.structure != Podcast.Structure.PARENT
-                or parent.parent_id is not None
-            ):
+            if parent.structure != Podcast.Structure.PARENT or parent.parent_id is not None:
                 raise serializers.ValidationError(
                     {"parent": "A child Podcast must belong directly to a root parent Podcast."}
                 )
         elif parent is not None:
-            raise serializers.ValidationError(
-                {"parent": "Only a child Podcast may have a parent."}
-            )
+            raise serializers.ValidationError({"parent": "Only a child Podcast may have a parent."})
 
         if self.instance is not None and structure != self.instance.structure:
             graph_is_materialized = (
@@ -276,7 +268,7 @@ class PodcastSerializer(serializers.ModelSerializer):
             ) from exc
 
     def create(self, validated_data):
-        # pop m2m lists and tags and subscribers
+        # Pop writable relationship lists and tags.
         countries = validated_data.pop("countries", [])
         competitions = validated_data.pop("competitions", [])
         regions = validated_data.pop("regions", [])
@@ -392,8 +384,7 @@ class SeasonSerializer(serializers.ModelSerializer):
         attrs = super().validate(attrs)
         podcast = attrs.get("podcast", getattr(self.instance, "podcast", None))
         if podcast is not None and (
-            podcast.parent_id is not None
-            or podcast.structure == Podcast.Structure.CHILD
+            podcast.parent_id is not None or podcast.structure == Podcast.Structure.CHILD
         ):
             raise serializers.ValidationError(
                 {"podcast": "A Season must belong to a root Podcast."}
@@ -490,11 +481,7 @@ class EpisodeSerializer(serializers.ModelSerializer):
         podcast = attrs.get("podcast", getattr(self.instance, "podcast", None))
         owner_changed = bool(
             podcast_supplied
-            and (
-                self.instance is None
-                or podcast is None
-                or podcast.pk != self.instance.podcast_id
-            )
+            and (self.instance is None or podcast is None or podcast.pk != self.instance.podcast_id)
         )
         season = attrs.get(
             "season",
@@ -668,7 +655,6 @@ class PodcastParentModelSerializer(serializers.ModelSerializer):
     )  # source calls Image.objects.filter_by_instance
 
     subscriber_count = serializers.IntegerField(source="subscribers.count", read_only=True)
-    subscribers = UserDisplaySerializer(many=True, read_only=True)
 
     class Meta:
         model = Podcast
@@ -697,7 +683,6 @@ class PodcastParentModelSerializer(serializers.ModelSerializer):
             "matches",
             "view_count",
             "subscriber_count",
-            "subscribers",
             "timestamp",
             "updated",
         ]

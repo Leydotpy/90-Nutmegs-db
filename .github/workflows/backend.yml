@@ -59,6 +59,86 @@ jobs:
           app/api/rest/web/apps/podcasts/tests.py
           app/api/rest/dashboard/apps/podcasts/tests.py
           app/conf/settings/production.py
+          app/conf/settings/development.py
+          app/conf/settings/environment.py
+          app/conf/logging.py
+          app/conf/test_logging.py
+          app/conf/test_configuration.py
+          app/conf/test_runtime_isolation.py
+          app/conf/task_queues.py
+          app/conf/tasks.py
+          app/conf/test_task_queues.py
+          app/conf/gunicorn_logging.py
+          app/run_process.py
+          app/apps/recommendation/management/commands/train_recommenders.py
+          app/apps/recommendation/management/commands/generate_dataset.py
+          app/api/rest/dashboard/apps/match/urls.py
+          app/api/rest/dashboard/apps/memberships/urls.py
+          app/api/rest/dashboard/apps/persons/urls.py
+          app/api/rest/dashboard/apps/podcasts/urls.py
+          app/api/rest/dashboard/apps/promotions/urls.py
+          app/api/rest/dashboard/apps/region/urls.py
+          app/api/rest/dashboard/apps/urls.py
+          app/api/rest/dashboard/urls.py
+          app/api/rest/urls.py
+          app/api/rest/web/apps/comments/urls.py
+          app/api/rest/web/apps/media/audio/urls.py
+          app/api/rest/web/apps/media/offline/urls.py
+          app/api/rest/web/apps/media/streaming/urls.py
+          app/api/rest/web/apps/media/urls.py
+          app/api/rest/web/apps/podcasts/urls.py
+          app/api/rest/web/apps/profile/urls.py
+          app/api/rest/web/apps/queue/urls.py
+          app/api/rest/web/apps/urls.py
+          app/api/rest/web/urls.py
+          app/api/urls.py
+          app/apps/accounts/apps.py
+          app/apps/analytics/apps.py
+          app/apps/category/apps.py
+          app/apps/comments/apps.py
+          app/apps/forum/apps.py
+          app/apps/match/apps.py
+          app/apps/media/apps.py
+          app/apps/media/images/apps.py
+          app/apps/memberships/apps.py
+          app/apps/persons/apps.py
+          app/apps/posts/apps.py
+          app/apps/posts/podcasts/apps.py
+          app/apps/posts/polls/apps.py
+          app/apps/promotions/apps.py
+          app/apps/queue/apps.py
+          app/apps/recommendation/apps.py
+          app/apps/region/apps.py
+          app/apps/region/leagues/apps.py
+          app/apps/region/leagues/clubs/apps.py
+          app/apps/tactics/apps.py
+          app/apps/thumbnail/apps.py
+          app/apps/config.py
+          app/conf/urls.py
+          app/conf/test_api_structure.py
+          app/conf/test_model_loading.py
+          app/api/rest/fields.py
+          app/apps/accounts/identity.py
+          app/apps/accounts/middleware.py
+          app/apps/accounts/session.py
+          app/apps/accounts/test_identity.py
+          app/apps/queue/signals.py
+          app/api/rest/authentication.py
+          app/api/rest/dashboard/audit.py
+          app/api/rest/dashboard/permissions.py
+          app/api/rest/dashboard/routers.py
+          app/api/rest/web/serializers/test_authentication.py
+          app/conf/test_endpoint_authentication.py
+          app/conf/test_staff_authorization.py
+          app/conf/test_login_identity.py
+          app/conf/test_identity_privacy.py
+          app/api/rest/dashboard/apps/podcasts/serializers.py
+          app/api/rest/dashboard/apps/memberships/serializers.py
+          app/api/rest/web/serializers/membership.py
+          app/conf/test_api_contracts.py
+          app/conf/test_listener_journeys.py
+          app/conf/test_health.py
+          app/apps/media/audio/test_dispatch.py
           app/conf/tests.py
 
       - name: Gate new foundation code with Ruff
@@ -88,6 +168,86 @@ jobs:
           app/api/rest/web/apps/podcasts/tests.py
           app/api/rest/dashboard/apps/podcasts/tests.py
           app/conf/settings/production.py
+          app/conf/settings/development.py
+          app/conf/settings/environment.py
+          app/conf/logging.py
+          app/conf/test_logging.py
+          app/conf/test_configuration.py
+          app/conf/test_runtime_isolation.py
+          app/conf/task_queues.py
+          app/conf/tasks.py
+          app/conf/test_task_queues.py
+          app/conf/gunicorn_logging.py
+          app/run_process.py
+          app/apps/recommendation/management/commands/train_recommenders.py
+          app/apps/recommendation/management/commands/generate_dataset.py
+          app/api/rest/dashboard/apps/match/urls.py
+          app/api/rest/dashboard/apps/memberships/urls.py
+          app/api/rest/dashboard/apps/persons/urls.py
+          app/api/rest/dashboard/apps/podcasts/urls.py
+          app/api/rest/dashboard/apps/promotions/urls.py
+          app/api/rest/dashboard/apps/region/urls.py
+          app/api/rest/dashboard/apps/urls.py
+          app/api/rest/dashboard/urls.py
+          app/api/rest/urls.py
+          app/api/rest/web/apps/comments/urls.py
+          app/api/rest/web/apps/media/audio/urls.py
+          app/api/rest/web/apps/media/offline/urls.py
+          app/api/rest/web/apps/media/streaming/urls.py
+          app/api/rest/web/apps/media/urls.py
+          app/api/rest/web/apps/podcasts/urls.py
+          app/api/rest/web/apps/profile/urls.py
+          app/api/rest/web/apps/queue/urls.py
+          app/api/rest/web/apps/urls.py
+          app/api/rest/web/urls.py
+          app/api/urls.py
+          app/apps/accounts/apps.py
+          app/apps/analytics/apps.py
+          app/apps/category/apps.py
+          app/apps/comments/apps.py
+          app/apps/forum/apps.py
+          app/apps/match/apps.py
+          app/apps/media/apps.py
+          app/apps/media/images/apps.py
+          app/apps/memberships/apps.py
+          app/apps/persons/apps.py
+          app/apps/posts/apps.py
+          app/apps/posts/podcasts/apps.py
+          app/apps/posts/polls/apps.py
+          app/apps/promotions/apps.py
+          app/apps/queue/apps.py
+          app/apps/recommendation/apps.py
+          app/apps/region/apps.py
+          app/apps/region/leagues/apps.py
+          app/apps/region/leagues/clubs/apps.py
+          app/apps/tactics/apps.py
+          app/apps/thumbnail/apps.py
+          app/apps/config.py
+          app/conf/urls.py
+          app/conf/test_api_structure.py
+          app/conf/test_model_loading.py
+          app/api/rest/fields.py
+          app/apps/accounts/identity.py
+          app/apps/accounts/middleware.py
+          app/apps/accounts/session.py
+          app/apps/accounts/test_identity.py
+          app/apps/queue/signals.py
+          app/api/rest/authentication.py
+          app/api/rest/dashboard/audit.py
+          app/api/rest/dashboard/permissions.py
+          app/api/rest/dashboard/routers.py
+          app/api/rest/web/serializers/test_authentication.py
+          app/conf/test_endpoint_authentication.py
+          app/conf/test_staff_authorization.py
+          app/conf/test_login_identity.py
+          app/conf/test_identity_privacy.py
+          app/api/rest/dashboard/apps/podcasts/serializers.py
+          app/api/rest/dashboard/apps/memberships/serializers.py
+          app/api/rest/web/serializers/membership.py
+          app/conf/test_api_contracts.py
+          app/conf/test_listener_journeys.py
+          app/conf/test_health.py
+          app/apps/media/audio/test_dispatch.py
           app/conf/tests.py
 
       - name: Type-check provider boundary
@@ -107,12 +267,19 @@ jobs:
         env:
           DJANGO_SECRET_KEY: ci-only-production-smoke-secret-with-more-than-fifty-characters
           DJANGO_ALLOWED_HOSTS: example.test
+          # Synthetic verified-TLS posture; no deployed proxy/domain is asserted.
+          TRUST_PROXY_SSL_HEADER: "true"
+          SECURE_HSTS_SECONDS: "31536000"
+          SECURE_HSTS_INCLUDE_SUBDOMAINS: "true"
+          SECURE_HSTS_PRELOAD: "true"
           DATABASE_URL: postgresql://sanfootball:ci-only@db.example.test/sanfootball
           REDIS_URL: redis://cache.example.test:6379/1
           CELERY_BROKER_URL: redis://cache.example.test:6379/2
           CLERK_SECRET_KEY: ci-only-clerk-secret
           CLERK_AUTH_PARTIES: https://app.example.test
           GIFFY_SHARED_SECRET: ci-only-giffy-shared-secret-with-more-than-thirty-two-characters
+          MAIN_PUBLIC_BASE_URL: https://api.example.test
+          GIFFY_API_BASE_URL: https://giffy.example.test
           CLOUDFLARE_ACCOUNT_ID: ci-account
           CLOUDFLARE_API_TOKEN: ci-api-token
           R2_ACCESS_KEY_ID: ci-r2-access
@@ -143,6 +310,11 @@ jobs:
         run: |
           uv export --locked --no-dev --no-emit-project --no-editable --no-hashes --quiet --output-file /tmp/audit-requirements.txt
           uv run --locked pip-audit --requirement /tmp/audit-requirements.txt --no-deps --disable-pip --progress-spinner off
+
+      - name: Audit locked worker dependencies
+        run: |
+          uv export --locked --no-dev --extra transcription-workers --extra recommendation-workers --no-emit-project --no-editable --no-hashes --quiet --output-file /tmp/worker-audit-requirements.txt
+          uv run --locked pip-audit --requirement /tmp/worker-audit-requirements.txt --no-deps --disable-pip --progress-spinner off
 
       - name: Run complete discovered suite with coverage
         run: |

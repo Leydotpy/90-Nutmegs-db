@@ -29,12 +29,17 @@ CELERY_BROKER_URL = "memory://"
 CELERY_RESULT_BACKEND = "cache+memory://"
 
 SESSION_COOKIE_SECURE = False
+PODCAST_QUEUE_SESSION_COOKIE_SECURE = False
+RECENTLY_VIEWED_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 SECURE_SSL_REDIRECT = False
+CORS_ALLOWED_ORIGINS = []
+CSRF_TRUSTED_ORIGINS = []
 
 # Tests never contact identity, AI, storage, or signing providers unless a
 # provider-contract test injects an explicit fake adapter.
 CLERK_SECRET_KEY = "test-clerk-secret"
+GIFFY_SHARED_SECRET = "test-giffy-secret"
 OPENAI_API_KEY = ""
 AWS_ACCESS_KEY_ID = ""
 AWS_SECRET_ACCESS_KEY = ""

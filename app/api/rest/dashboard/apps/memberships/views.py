@@ -1,3 +1,5 @@
+from api.rest.dashboard.audit import StaffAuditMixin
+from api.rest.dashboard.permissions import StaffReadOnlyOrSuperuser
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
@@ -24,22 +26,8 @@ from .serializers import (
 User = get_user_model()
 
 
-# Permission: allow staff to read, but only superusers can create/update/delete
-class IsStaffReadOnlyOrSuperuser(BasePermission):
-    """
-    - SAFE_METHODS (GET/HEAD/OPTIONS): allow if user is authenticated and is staff
-    - Unsafe methods (POST/PUT/PATCH/DELETE): only allow superusers.
-    """
-
-    def has_permission(self, request, view):
-        user = request.user
-        if request.method in SAFE_METHODS:
-            return bool(user and user.is_authenticated and user.is_staff)
-        return bool(user and user.is_authenticated and user.is_superuser)
-
-
 # --- FeatureViewSet (unchanged) ---
-class FeatureViewSet(viewsets.ModelViewSet):
+class FeatureViewSet(StaffAuditMixin, viewsets.ModelViewSet):
     queryset = Feature.objects.all().order_by("kind")
 
     def get_serializer_class(self):
@@ -47,11 +35,11 @@ class FeatureViewSet(viewsets.ModelViewSet):
             return FeatureDisplaySerializer
         return FeatureCreateSerializer
 
-    permission_classes = (IsStaffReadOnlyOrSuperuser,)
+    permission_classes = (StaffReadOnlyOrSuperuser,)
 
 
 # --- PlanViewSet: unchanged except added prefetch and same permission pattern ---
-class PlanViewSet(viewsets.ModelViewSet):
+class PlanViewSet(StaffAuditMixin, viewsets.ModelViewSet):
     queryset = Plan.objects.prefetch_related("features", "planfeature_set__feature").all()
 
     def get_serializer_class(self):
@@ -59,9 +47,9 @@ class PlanViewSet(viewsets.ModelViewSet):
             return PlanDisplaySerializer
         return PlanCreateSerializer
 
-    permission_classes = (IsStaffReadOnlyOrSuperuser,)
+    permission_classes = (StaffReadOnlyOrSuperuser,)
 
-    @action(detail=True, methods=["post"], permission_classes=(IsAdminUser,))
+    @action(detail=True, methods=["post"], permission_classes=(StaffReadOnlyOrSuperuser,))
     def add_feature(self, request, pk=None):
         plan = self.get_object()
         serializer = PlanFeatureCreateSerializer(data={**request.data, "plan": plan.id})
@@ -85,7 +73,7 @@ class PlanViewSet(viewsets.ModelViewSet):
                         status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
-class PlanFeatureViewSet(viewsets.ModelViewSet):
+class PlanFeatureViewSet(StaffAuditMixin, viewsets.ModelViewSet):
     queryset = PlanFeature.objects.select_related("plan", "feature").all()
 
     def get_serializer_class(self):
@@ -93,10 +81,10 @@ class PlanFeatureViewSet(viewsets.ModelViewSet):
             return PlanFeatureDisplaySerializer
         return PlanFeatureCreateSerializer
 
-    permission_classes = (IsStaffReadOnlyOrSuperuser,)
+    permission_classes = (StaffReadOnlyOrSuperuser,)
 
 
-class EntitlementViewSet(viewsets.ModelViewSet):
+class EntitlementViewSet(StaffAuditMixin, viewsets.ModelViewSet):
     queryset = Entitlement.objects.select_related("user", "granted_by_subscription", "content_type").all()
 
     def get_serializer_class(self):
@@ -104,20 +92,20 @@ class EntitlementViewSet(viewsets.ModelViewSet):
             return EntitlementDisplaySerializer
         return EntitlementCreateSerializer
 
-    permission_classes = (IsStaffReadOnlyOrSuperuser,)
+    permission_classes = (StaffReadOnlyOrSuperuser,)
 
 
 # -------------------------
 # Membership & Subscription
 # -------------------------
-class MembershipViewSet(viewsets.ModelViewSet):
+class MembershipViewSet(StaffAuditMixin, viewsets.ModelViewSet):
     """
     Admin-level control over memberships. Read access for staff, create/update/destroy only for superusers.
     Basic server-side validation applied on create/update.
     """
     queryset = Membership.objects.select_related("user", "plan").all()
     serializer_class = MembershipSerializer
-    permission_classes = (IsStaffReadOnlyOrSuperuser,)
+    permission_classes = (StaffReadOnlyOrSuperuser,)
 
     def perform_create(self, serializer):
         # Validate: user exists and doesn't already have a membership (OneToOne enforces this but we provide clear error)
@@ -141,7 +129,7 @@ class MembershipViewSet(viewsets.ModelViewSet):
         serializer.save()
 
 
-class SubscriptionViewSet(viewsets.ModelViewSet):
+class SubscriptionViewSet(StaffAuditMixin, viewsets.ModelViewSet):
     """
     Admin-only create/update/destroy (superusers), staff can read.
     Basic server-side validation:
@@ -150,7 +138,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
     """
     queryset = Subscription.objects.select_related("membership").all()
     serializer_class = SubscriptionSerializer
-    permission_classes = (IsStaffReadOnlyOrSuperuser,)
+    permission_classes = (StaffReadOnlyOrSuperuser,)
 
     def validate_dates(self, data):
         start = data.get("start_date")

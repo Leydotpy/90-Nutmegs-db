@@ -2,30 +2,15 @@ import json
 from datetime import timedelta
 from pathlib import Path
 
-import joblib
-import numpy as np
-import pandas as pd
 from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
-from scipy.sparse import csr_matrix
-# sklearn
-from sklearn.decomposition import NMF, TruncatedSVD
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.preprocessing import normalize
-
-# faiss
-try:
-    import faiss
-except Exception:
-    faiss = None
 
 # Django models
 from apps.posts.podcasts.models import Episode, PlayBack
 
 # Output paths (tune to your project)
-ARTIFACT_DIR = Path(getattr(settings, "RECOMMENDER_ARTIFACT_DIR"))
-ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+ARTIFACT_DIR = Path(settings.RECOMMENDER_ARTIFACT_DIR)
 
 NMF_COMPONENTS = getattr(settings, "NMF_COMPONENTS", 64)
 SVD_COMPONENTS = getattr(settings, "SVD_COMPONENTS", 64)
@@ -36,44 +21,60 @@ MIN_USER_INTERACTIONS = getattr(settings, "MIN_USER_INTERACTIONS", 3)
 HYBRID_DIM = NMF_COMPONENTS + SVD_COMPONENTS
 
 
-def _ensure_faiss():
-    if faiss is None:
-        raise RuntimeError("faiss is not installed. Install faiss-cpu or faiss-gpu to use ANN indexing.")
-
-
 class Command(BaseCommand):
-    help = "Train NMF (collaborative) and content (TF-IDF+SVD) models, build FAISS ANN index, and save artifacts."
+    help = "Train NMF/content models, build the FAISS index and save artifacts."
 
     def handle(self, *args, **options):
+        # Command discovery/help must not import worker libraries or create files.
+        try:
+            import faiss
+            import joblib
+            import numpy as np
+            import pandas as pd
+            from scipy.sparse import csr_matrix
+            from sklearn.decomposition import NMF, TruncatedSVD
+            from sklearn.feature_extraction.text import TfidfVectorizer
+            from sklearn.preprocessing import normalize
+        except ImportError:
+            raise CommandError(
+                "Training requires the recommendation-workers dependency extra"
+            ) from None
+        ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
         self.stdout.write(self.style.NOTICE("Building interaction dataframe..."))
         now = timezone.now()
         since = now - timedelta(days=LOOK_BACK_DAYS)
 
         # Extract PlayBacks within lookback window
-        pbs = PlayBack.objects.filter(last_played_at__gte=since).select_related('episode', 'user', 'episode__podcast')
+        pbs = PlayBack.objects.filter(last_played_at__gte=since).select_related(
+            "episode", "user", "episode__podcast"
+        )
         rows = []
         for pb in pbs.iterator():
             if not pb.user_id:
                 continue  # skip anonymous; adapt if you want to include IP-based anonymous
             score = 1.0 + (3.0 if pb.is_completed else 0.0)
-            rows.append({'user_id': pb.user_id, 'episode_id': pb.episode_id, 'score': score})
+            rows.append({"user_id": pb.user_id, "episode_id": pb.episode_id, "score": score})
         if not rows:
-            self.stdout.write(self.style.ERROR("No playback rows found in look back window. Nothing to train."))
+            self.stdout.write(
+                self.style.ERROR("No playback rows found in look back window. Nothing to train.")
+            )
             return
 
         df = pd.DataFrame(rows)
-        df = df.groupby(['user_id', 'episode_id']).agg({'score': 'sum'}).reset_index()
+        df = df.groupby(["user_id", "episode_id"]).agg({"score": "sum"}).reset_index()
 
-        user_ids = df['user_id'].unique().tolist()
-        episode_ids = df['episode_id'].unique().tolist()
+        user_ids = df["user_id"].unique().tolist()
+        episode_ids = df["episode_id"].unique().tolist()
         user_to_index = {u: i for i, u in enumerate(user_ids)}
         episode_to_index = {e: i for i, e in enumerate(episode_ids)}
 
-        rows_idx = df['user_id'].map(user_to_index).to_numpy()
-        cols_idx = df['episode_id'].map(episode_to_index).to_numpy()
-        data = df['score'].to_numpy()
+        rows_idx = df["user_id"].map(user_to_index).to_numpy()
+        cols_idx = df["episode_id"].map(episode_to_index).to_numpy()
+        data = df["score"].to_numpy()
 
-        user_item = csr_matrix((data, (rows_idx, cols_idx)), shape=(len(user_ids), len(episode_ids)))
+        user_item = csr_matrix(
+            (data, (rows_idx, cols_idx)), shape=(len(user_ids), len(episode_ids))
+        )
 
         # Filter users with very few interactions
         user_counts = (user_item > 0).sum(axis=1).A1
@@ -87,20 +88,26 @@ class Command(BaseCommand):
 
         # ------- Train NMF (Collaborative) -------
         self.stdout.write(self.style.NOTICE("Training NMF collaborative model..."))
-        nmf = NMF(n_components=NMF_COMPONENTS, init='nndsvda', random_state=42, max_iter=300)
+        nmf = NMF(n_components=NMF_COMPONENTS, init="nndsvda", random_state=42, max_iter=300)
         W = nmf.fit_transform(user_item_filtered)  # users x k
         H = nmf.components_  # k x items
 
         # Persist nmf, metadata, and factors
-        joblib.dump(nmf, ARTIFACT_DIR / 'nmf_model.joblib')
-        joblib.dump({'user_ids': user_ids_filtered, 'episode_ids': episode_ids},
-                    ARTIFACT_DIR / 'nmf_meta.joblib')
-        np.save(ARTIFACT_DIR / 'W.npy', W)
-        np.save(ARTIFACT_DIR / 'H.npy', H)
+        joblib.dump(nmf, ARTIFACT_DIR / "nmf_model.joblib")
+        joblib.dump(
+            {"user_ids": user_ids_filtered, "episode_ids": episode_ids},
+            ARTIFACT_DIR / "nmf_meta.joblib",
+        )
+        np.save(ARTIFACT_DIR / "W.npy", W)
+        np.save(ARTIFACT_DIR / "H.npy", H)
 
         # ------- Train content model (TF-IDF + SVD) -------
         self.stdout.write(self.style.NOTICE("Building TF-IDF corpus for episodes..."))
-        ep_qs = Episode.objects.filter(id__in=episode_ids).select_related('podcast').prefetch_related('categories')
+        ep_qs = (
+            Episode.objects.filter(id__in=episode_ids)
+            .select_related("podcast")
+            .prefetch_related("categories")
+        )
         ep_map = {e.id: e for e in ep_qs}
         corpus = []
         ep_order = []
@@ -110,9 +117,9 @@ class Command(BaseCommand):
                 corpus.append("")
                 ep_order.append(eid)
                 continue
-            tags = getattr(e, 'tags', '') or ''
-            podcast_title = e.podcast.title if e.podcast else ''
-            text = ' '.join(filter(None, [e.title or '', e.description or '', tags, podcast_title]))
+            tags = getattr(e, "tags", "") or ""
+            podcast_title = e.podcast.title if e.podcast else ""
+            text = " ".join(filter(None, [e.title or "", e.description or "", tags, podcast_title]))
             corpus.append(text)
             ep_order.append(eid)
 
@@ -126,10 +133,10 @@ class Command(BaseCommand):
         # normalize
         X_svd = normalize(X_svd, axis=1)
 
-        joblib.dump(tf, ARTIFACT_DIR / 'tfidf.joblib')
-        joblib.dump(svd, ARTIFACT_DIR / 'svd.joblib')
-        joblib.dump({'episode_order': ep_order}, ARTIFACT_DIR / 'content_meta.joblib')
-        np.save(ARTIFACT_DIR / 'X_svd.npy', X_svd)
+        joblib.dump(tf, ARTIFACT_DIR / "tfidf.joblib")
+        joblib.dump(svd, ARTIFACT_DIR / "svd.joblib")
+        joblib.dump({"episode_order": ep_order}, ARTIFACT_DIR / "content_meta.joblib")
+        np.save(ARTIFACT_DIR / "X_svd.npy", X_svd)
 
         # ------- Build hybrid item vectors (concat item_factors + content SVD) -------
         self.stdout.write(self.style.NOTICE("Building hybrid item vectors and FAISS index..."))
@@ -145,10 +152,9 @@ class Command(BaseCommand):
 
         hybrid = np.hstack([item_factors, X_svd])  # shape (n_items, HYBRID_DIM)
         # normalize vectors for cosine/inner-product search
-        hybrid = normalize(hybrid, axis=1).astype('float32')
+        hybrid = normalize(hybrid, axis=1).astype("float32")
 
         # Build FAISS index (HNSW flat, inner product) for ANN
-        _ensure_faiss()
         d = hybrid.shape[1]
         index = faiss.IndexHNSWFlat(d, 32)  # M=32; tune
         index.hnsw.efConstruction = 200
@@ -157,9 +163,11 @@ class Command(BaseCommand):
         faiss.normalize_L2(hybrid)
         index.add(hybrid)
 
-        faiss.write_index(index, str(ARTIFACT_DIR / 'faiss_index.ivf'))
-        joblib.dump({'episode_ids': episode_ids, 'user_ids': user_ids_filtered},
-                    ARTIFACT_DIR / 'hybrid_meta.joblib')
+        faiss.write_index(index, str(ARTIFACT_DIR / "faiss_index.ivf"))
+        joblib.dump(
+            {"episode_ids": episode_ids, "user_ids": user_ids_filtered},
+            ARTIFACT_DIR / "hybrid_meta.joblib",
+        )
         np.save(ARTIFACT_DIR / "hybrid.npy", hybrid)
 
         manifest = {
@@ -194,4 +202,6 @@ class Command(BaseCommand):
             encoding="utf-8",
         )
 
-        self.stdout.write(self.style.SUCCESS("Training complete. Artifacts written to %s" % ARTIFACT_DIR))
+        self.stdout.write(
+            self.style.SUCCESS(f"Training complete. Artifacts written to {ARTIFACT_DIR}")
+        )

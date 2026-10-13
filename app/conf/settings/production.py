@@ -7,13 +7,21 @@ from apps.media.delivery import (
     resolve_hls_cookie_scope,
 )
 from apps.media.providers.config import CloudflareMediaConfig
-from decouple import config
 from django.core.exceptions import ImproperlyConfigured
 from pycflare.django import r2_storages
 from pycflare.storage import R2Settings
 
 from . import base as base_settings
 from .base import *  # noqa: F401,F403
+from .environment import (
+    allowed_hosts,
+    config,
+    csv_values,
+    https_origins,
+    nonnegative,
+    positive,
+    service_url,
+)
 
 # Name the inherited values used by production-only validation explicitly so
 # static checks can prove they exist despite the transitional wildcard import.
@@ -33,7 +41,14 @@ def _required(name: str) -> str:
     value = config(name, default="").strip()
     if not value:
         raise ImproperlyConfigured(f"{name} is required by conf.settings.production")
+    if any(marker in name for marker in ("SECRET", "TOKEN", "PRIVATE_KEY", "SIGNING_KEY")):
+        _reject_placeholder(name, value)
     return value
+
+
+def _reject_placeholder(name: str, value: str) -> None:
+    if value.lower().startswith(("replace-", "change-me", "unsafe-")):
+        raise ImproperlyConfigured(f"{name} must not be an example or development placeholder")
 
 
 DEBUG = False
@@ -43,38 +58,39 @@ if len(SECRET_KEY) < 50:
         "DJANGO_SECRET_KEY must contain at least 50 characters in production"
     )
 
-ALLOWED_HOSTS = [
-    host.strip() for host in _required("DJANGO_ALLOWED_HOSTS").split(",") if host.strip()
-]
-if not ALLOWED_HOSTS:
-    raise ImproperlyConfigured("DJANGO_ALLOWED_HOSTS must contain at least one allowed host")
-if "*" in ALLOWED_HOSTS:
-    raise ImproperlyConfigured(
-        "DJANGO_ALLOWED_HOSTS cannot contain the global '*' wildcard in production"
-    )
-CORS_ALLOWED_ORIGINS = [
-    origin.strip()
-    for origin in config("CORS_ALLOWED_ORIGINS", default="").split(",")
-    if origin.strip()
-]
-CSRF_TRUSTED_ORIGINS = [
-    origin.strip()
-    for origin in config("CSRF_TRUSTED_ORIGINS", default="").split(",")
-    if origin.strip()
-]
+SECRET_KEY_FALLBACKS = csv_values(config("DJANGO_SECRET_KEY_FALLBACKS", default=""))
+for _fallback in SECRET_KEY_FALLBACKS:
+    _reject_placeholder("DJANGO_SECRET_KEY_FALLBACKS", _fallback)
+    if len(_fallback) < 50:
+        raise ImproperlyConfigured("DJANGO_SECRET_KEY_FALLBACKS entries must have 50+ characters")
+
+ALLOWED_HOSTS = allowed_hosts(_required("DJANGO_ALLOWED_HOSTS"))
+CORS_ALLOWED_ORIGINS = https_origins(
+    "CORS_ALLOWED_ORIGINS", csv_values(config("CORS_ALLOWED_ORIGINS", default=""))
+)
+CSRF_TRUSTED_ORIGINS = https_origins(
+    "CSRF_TRUSTED_ORIGINS", csv_values(config("CSRF_TRUSTED_ORIGINS", default=""))
+)
 
 DATABASE_URL = _required("DATABASE_URL")
-DATABASES = {
-    "default": dj_database_url.parse(
+if not DATABASE_URL.startswith(("postgres://", "postgresql://")):
+    raise ImproperlyConfigured("DATABASE_URL must use PostgreSQL in conf.settings.production")
+service_url("DATABASE_URL", DATABASE_URL, ("postgres", "postgresql"))
+try:
+    _database = dj_database_url.parse(
         DATABASE_URL,
-        conn_max_age=config("DATABASE_CONN_MAX_AGE", cast=int, default=60),
+        conn_max_age=nonnegative(
+            "DATABASE_CONN_MAX_AGE", config("DATABASE_CONN_MAX_AGE", cast=int, default=60)
+        ),
         conn_health_checks=True,
     )
-}
-if DATABASES["default"]["ENGINE"] != "django.db.backends.postgresql":
-    raise ImproperlyConfigured("DATABASE_URL must use PostgreSQL in conf.settings.production")
+except ValueError, TypeError:
+    raise ImproperlyConfigured("DATABASE_URL must be a valid PostgreSQL URL") from None
+if not _database.get("NAME"):
+    raise ImproperlyConfigured("DATABASE_URL must specify a database name")
+DATABASES = {"default": _database}
 
-REDIS_URL = _required("REDIS_URL")
+REDIS_URL = service_url("REDIS_URL", _required("REDIS_URL"), ("redis", "rediss"))
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
@@ -88,18 +104,28 @@ CACHES = {
         },
     }
 }
-CELERY_BROKER_URL = _required("CELERY_BROKER_URL")
+CELERY_BROKER_URL = service_url(
+    "CELERY_BROKER_URL", _required("CELERY_BROKER_URL"), ("redis", "rediss")
+)
 CLERK_SECRET_KEY = _required("CLERK_SECRET_KEY")
 CLERK_AUTH_PARTIES = tuple(
     party.strip() for party in _required("CLERK_AUTH_PARTIES").split(",") if party.strip()
 )
 if not CLERK_AUTH_PARTIES:
     raise ImproperlyConfigured("CLERK_AUTH_PARTIES must contain at least one allowed party")
+CLERK_AUTH_PARTIES = tuple(https_origins("CLERK_AUTH_PARTIES", CLERK_AUTH_PARTIES))
 GIFFY_SHARED_SECRET = _required("GIFFY_SHARED_SECRET")
 if len(GIFFY_SHARED_SECRET) < 32:
     raise ImproperlyConfigured(
         "GIFFY_SHARED_SECRET must contain at least 32 characters in production"
     )
+MAIN_PUBLIC_BASE_URL = https_origins("MAIN_PUBLIC_BASE_URL", [_required("MAIN_PUBLIC_BASE_URL")])[0]
+GIFFY_API_BASE_URL = https_origins("GIFFY_API_BASE_URL", [_required("GIFFY_API_BASE_URL")])[0]
+GIFFY_TIMEOUT_SECONDS = positive("GIFFY_TIMEOUT_SECONDS", base_settings.GIFFY_TIMEOUT_SECONDS)
+PRESIGN_EXPIRES_SECONDS = positive("PRESIGN_EXPIRES_SECONDS", base_settings.PRESIGN_EXPIRES_SECONDS)
+PRESIGN_PREVIEW_EXPIRES_SECONDS = positive(
+    "PRESIGN_PREVIEW_EXPIRES_SECONDS", base_settings.PRESIGN_PREVIEW_EXPIRES_SECONDS
+)
 
 MEDIA_STORAGE_PROVIDER = config(
     "MEDIA_STORAGE_PROVIDER",
@@ -168,27 +194,32 @@ if not CLOUDFLARE_STREAM_ALLOWED_ORIGINS:
         "CLOUDFLARE_STREAM_ALLOWED_ORIGINS must contain at least one playback hostname"
     )
 
-CLOUDFLARE_MEDIA_CONFIG = CloudflareMediaConfig(
-    account_id=CLOUDFLARE_ACCOUNT_ID,
-    api_token=CLOUDFLARE_API_TOKEN,
-    r2_access_key_id=R2_ACCESS_KEY_ID,
-    r2_secret_access_key=R2_SECRET_ACCESS_KEY,
-    r2_private_bucket_name=R2_PRIVATE_BUCKET_NAME,
-    r2_public_bucket_name=R2_PUBLIC_BUCKET_NAME,
-    r2_public_base_url=R2_PUBLIC_BASE_URL,
-    images_account_hash=CLOUDFLARE_IMAGES_ACCOUNT_HASH,
-    images_signing_key=CLOUDFLARE_IMAGES_SIGNING_KEY,
-    stream_customer_code=CLOUDFLARE_STREAM_CUSTOMER_CODE,
-    stream_signing_key_id=CLOUDFLARE_STREAM_SIGNING_KEY_ID,
-    stream_signing_private_key_b64=CLOUDFLARE_STREAM_SIGNING_PRIVATE_KEY_B64,
-    stream_webhook_secret=CLOUDFLARE_STREAM_WEBHOOK_SECRET,
-    upload_url_ttl_seconds=MEDIA_UPLOAD_URL_TTL_SECONDS,
-    private_url_ttl_seconds=MEDIA_PRIVATE_URL_TTL_SECONDS,
-    upload_max_bytes=MEDIA_UPLOAD_MAX_BYTES,
-    upload_max_duration_seconds=MEDIA_UPLOAD_MAX_DURATION_SECONDS,
-    allowed_upload_origins=MEDIA_UPLOAD_ALLOWED_ORIGINS,
-    stream_allowed_origins=CLOUDFLARE_STREAM_ALLOWED_ORIGINS,
-)
+try:
+    CLOUDFLARE_MEDIA_CONFIG = CloudflareMediaConfig(
+        account_id=CLOUDFLARE_ACCOUNT_ID,
+        api_token=CLOUDFLARE_API_TOKEN,
+        r2_access_key_id=R2_ACCESS_KEY_ID,
+        r2_secret_access_key=R2_SECRET_ACCESS_KEY,
+        r2_private_bucket_name=R2_PRIVATE_BUCKET_NAME,
+        r2_public_bucket_name=R2_PUBLIC_BUCKET_NAME,
+        r2_public_base_url=R2_PUBLIC_BASE_URL,
+        images_account_hash=CLOUDFLARE_IMAGES_ACCOUNT_HASH,
+        images_signing_key=CLOUDFLARE_IMAGES_SIGNING_KEY,
+        stream_customer_code=CLOUDFLARE_STREAM_CUSTOMER_CODE,
+        stream_signing_key_id=CLOUDFLARE_STREAM_SIGNING_KEY_ID,
+        stream_signing_private_key_b64=CLOUDFLARE_STREAM_SIGNING_PRIVATE_KEY_B64,
+        stream_webhook_secret=CLOUDFLARE_STREAM_WEBHOOK_SECRET,
+        upload_url_ttl_seconds=MEDIA_UPLOAD_URL_TTL_SECONDS,
+        private_url_ttl_seconds=MEDIA_PRIVATE_URL_TTL_SECONDS,
+        upload_max_bytes=MEDIA_UPLOAD_MAX_BYTES,
+        upload_max_duration_seconds=MEDIA_UPLOAD_MAX_DURATION_SECONDS,
+        allowed_upload_origins=MEDIA_UPLOAD_ALLOWED_ORIGINS,
+        stream_allowed_origins=CLOUDFLARE_STREAM_ALLOWED_ORIGINS,
+    )
+except ImproperlyConfigured as exc:
+    # Provider validators name fields safely; suppress low-level parser chains
+    # that may include a malformed URL, key or credential supplied at startup.
+    raise ImproperlyConfigured(str(exc)) from None
 
 # Existing FileFields become durable/private R2 objects in production.  Public
 # canonical assets use the separately validated R2 custom domain through the
@@ -238,7 +269,7 @@ if any(str(value).strip() for value in _cloudfront_signing_values.values()):
             cookie_domain=CLOUDFRONT_COOKIE_DOMAIN,
         )
     except HLSDeliveryConfigurationError as exc:
-        raise ImproperlyConfigured(str(exc)) from exc
+        raise ImproperlyConfigured(str(exc)) from None
     CLOUDFRONT_DOMAIN = _hls_cookie_scope.delivery_host
     CLOUDFRONT_COOKIE_DOMAIN = _hls_cookie_scope.cookie_domain
     if any("*" in host or host.startswith(".") for host in ALLOWED_HOSTS):
@@ -268,11 +299,19 @@ SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", cast=bool, default=True)
 # Container/orchestrator probes commonly reach the app over private HTTP rather
 # than through the TLS-terminating proxy. Exempt only these two exact paths.
 SECURE_REDIRECT_EXEMPT = [r"^health/(?:live|ready)/$"]
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-SECURE_HSTS_SECONDS = config("SECURE_HSTS_SECONDS", cast=int, default=31536000)
+TRUST_PROXY_SSL_HEADER = config("TRUST_PROXY_SSL_HEADER", cast=bool, default=False)
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https") if TRUST_PROXY_SSL_HEADER else None
+# Enable HSTS only after the deployment's HTTPS and subdomain coverage are verified.
+SECURE_HSTS_SECONDS = nonnegative(
+    "SECURE_HSTS_SECONDS", config("SECURE_HSTS_SECONDS", cast=int, default=0)
+)
 SECURE_HSTS_INCLUDE_SUBDOMAINS = config(
     "SECURE_HSTS_INCLUDE_SUBDOMAINS",
     cast=bool,
-    default=True,
+    default=False,
 )
-SECURE_HSTS_PRELOAD = config("SECURE_HSTS_PRELOAD", cast=bool, default=True)
+SECURE_HSTS_PRELOAD = config("SECURE_HSTS_PRELOAD", cast=bool, default=False)
+if SECURE_HSTS_PRELOAD and (SECURE_HSTS_SECONDS < 31536000 or not SECURE_HSTS_INCLUDE_SUBDOMAINS):
+    raise ImproperlyConfigured(
+        "SECURE_HSTS_PRELOAD requires a year-long policy and SECURE_HSTS_INCLUDE_SUBDOMAINS"
+    )

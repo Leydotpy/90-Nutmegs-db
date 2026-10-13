@@ -1,12 +1,13 @@
 import enum
-from core.application import AppConfig
+
+from django.apps import AppConfig
 
 VIDEO_EXTENSIONS = ("MP4", "AVI", "FLV", "MKV", "3GP", "WebM", "WMV", "MOV", "MPEG")
 AUDIO_EXTENSIONS = ("MP3", "WAV", "AAC", "WMA", "FLAC", "M4A", "AIFF", "AMR", "MIDI")
 
 
-class Positions(enum.StrEnum):
-    ...
+class Positions(enum.StrEnum): ...
+
 
 GK = "GK"
 SWK = "SWK"
@@ -49,9 +50,7 @@ POSITION_MAP = {
             LST: {"top": 30, "left": 40},
             RST: {"top": 30, "left": 60},
         },
-        "DIAMOND": {
-
-        }
+        "DIAMOND": {},
     },
     "4-3-3": {
         "DEFAULT": {
@@ -100,9 +99,10 @@ POSITION_MAP = {
             RWF: {"top": 30, "left": 80},
             CF: {"top": 30, "left": 50},
         }
-    }
+    },
 }
 
 
 class Config(AppConfig):
-    name = 'apps'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "apps"

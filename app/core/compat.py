@@ -4,11 +4,10 @@ import re
 import typing
 
 from django import template
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ImproperlyConfigured
-
-from core.loading import get_model
 
 # A setting that can be used in foreign key declarations
 AUTH_USER_MODEL = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
@@ -40,7 +39,9 @@ def get_user_model():
     """
 
     try:
-        model = get_model(AUTH_USER_APP_LABEL, AUTH_USER_MODEL_NAME)
+        model = apps.get_model(
+            AUTH_USER_APP_LABEL, AUTH_USER_MODEL_NAME, require_ready=False
+        )
     except LookupError:
         # Convert exception to an ImproperlyConfigured exception for
         # backwards compatibility with previous Oscar versions and the

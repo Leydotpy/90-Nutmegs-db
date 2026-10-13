@@ -1,3 +1,5 @@
+from api.rest.dashboard.audit import StaffAuditMixin
+from api.rest.dashboard.permissions import ActiveStaff
 from django.db import transaction
 from django.db.models import Prefetch
 from django.utils.decorators import method_decorator
@@ -35,9 +37,9 @@ def minute_from_timefield(timefield):
         return None
 
 
-class MatchViewSet(viewsets.ModelViewSet):
+class MatchViewSet(StaffAuditMixin, viewsets.ModelViewSet):
     serializer_class = MatchSerializer
-    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+    permission_classes = [ActiveStaff]
     filter_backends = [filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["home_team", "away_team", "date", "competition", "campaign"]
     search_fields = ["home_team__name", "away_team__name"]

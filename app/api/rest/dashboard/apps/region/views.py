@@ -1,3 +1,5 @@
+from api.rest.dashboard.audit import StaffAuditMixin
+from api.rest.dashboard.permissions import ActiveStaff
 from typing import Optional
 
 from django.db import transaction
@@ -31,14 +33,14 @@ from apps.region.models import Region, Country
 from .registry import region_registry
 
 
-class RegionViewSet(viewsets.ModelViewSet):
+class RegionViewSet(StaffAuditMixin, viewsets.ModelViewSet):
     """
     RegionViewSet: primary resource for Region. All Country/League/Team creation & management
     is available via nested actions on this viewset.
     """
     queryset = Region.objects.all()
     serializer_class = RegionSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [ActiveStaff]
     filter_backends = [filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter]
     search_fields = ["name", "code"]
     ordering_fields = ["name", "timestamp"]
@@ -198,7 +200,7 @@ class RegionViewSet(viewsets.ModelViewSet):
         url_path="countries",
         throttle_classes=[ScopedRateThrottle],
         # throttle_scope="region_countries_write",
-        permission_classes=[permissions.IsAuthenticatedOrReadOnly],
+        permission_classes=[ActiveStaff],
     )
     def countries(self, request, pk=None):
         region = self.get_object()
@@ -234,7 +236,7 @@ class RegionViewSet(viewsets.ModelViewSet):
         url_path=r"countries/(?P<country_id>[^/.]+)",
         throttle_classes=[ScopedRateThrottle],
         # throttle_scope="region_countries_write",
-        permission_classes=[permissions.IsAuthenticatedOrReadOnly],
+        permission_classes=[ActiveStaff],
     )
     def country_detail(self, request, pk=None, country_id=None):
         region = self.get_object()
@@ -292,7 +294,7 @@ class RegionViewSet(viewsets.ModelViewSet):
         url_path="countries/(?P<country_id>[^/.]+)/leagues",
         throttle_classes=[ScopedRateThrottle],
         # throttle_scope="region_leagues_write",
-        permission_classes=[permissions.IsAuthenticatedOrReadOnly],
+        permission_classes=[ActiveStaff],
     )
     def leagues(self, request, *, pk=None, country_id=None):
         region = self.get_object()
@@ -332,7 +334,7 @@ class RegionViewSet(viewsets.ModelViewSet):
         url_path=r"countries/(?P<country_id>[^/.]+)/leagues/(?P<league_id>[^/.]+)",
         throttle_classes=[ScopedRateThrottle],
         # throttle_scope="region_leagues_write",
-        permission_classes=[permissions.IsAuthenticatedOrReadOnly],
+        permission_classes=[ActiveStaff],
     )
     def league_detail(self, request, *, pk=None, country_id=None, league_id=None):
         region = self.get_object()
@@ -382,7 +384,7 @@ class RegionViewSet(viewsets.ModelViewSet):
         url_path="countries/(?P<country_id>[^/.]+)/leagues/(?P<league_id>[^/.]+)/teams",
         throttle_classes=[ScopedRateThrottle],
         # throttle_scope="region_teams_write",
-        permission_classes=[permissions.IsAuthenticatedOrReadOnly],
+        permission_classes=[ActiveStaff],
     )
     def teams(self, request, *, pk=None, country_id=None, league_id=None):
         region = self.get_object()
@@ -421,7 +423,7 @@ class RegionViewSet(viewsets.ModelViewSet):
         url_path=r"countries/(?P<country_id>[^/.]+)/leagues/(?P<league_id>[^/.]+)/teams/(?P<team_id>[^/.]+)",
         throttle_classes=[ScopedRateThrottle],
         # throttle_scope="region_teams_write",
-        permission_classes=[permissions.IsAuthenticatedOrReadOnly],
+        permission_classes=[ActiveStaff],
     )
     def team_detail(self, request, *, pk=None, country_id=None, league_id=None, team_id=None):
         region = self.get_object()
@@ -456,8 +458,8 @@ class RegionViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class GenericRegionView(mixins.ListModelMixin, viewsets.GenericViewSet):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+class GenericRegionView(StaffAuditMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
+    permission_classes = [ActiveStaff]
     filter_backends = [filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter]
     search_fields = ["name", "code"]
     ordering_fields = ["name", "timestamp"]
@@ -508,7 +510,7 @@ class GenericRegionView(mixins.ListModelMixin, viewsets.GenericViewSet):
         detail=True,
         url_path="countries",
         throttle_classes = [ScopedRateThrottle],
-        permission_classes = [permissions.IsAuthenticatedOrReadOnly],
+        permission_classes = [ActiveStaff],
         methods=["get"]
     )
     def countries(self, request, *args, **kwargs):
@@ -518,7 +520,7 @@ class GenericRegionView(mixins.ListModelMixin, viewsets.GenericViewSet):
         detail=True,
         url_path="leagues",
         throttle_classes = [ScopedRateThrottle],
-        permission_classes = [permissions.IsAuthenticatedOrReadOnly],
+        permission_classes = [ActiveStaff],
         methods=["get"]
     )
     def leagues(self, request, *args, **kwargs):
@@ -528,28 +530,28 @@ class GenericRegionView(mixins.ListModelMixin, viewsets.GenericViewSet):
         detail=True,
         url_path="teams",
         throttle_classes = [ScopedRateThrottle],
-        permission_classes = [permissions.IsAuthenticatedOrReadOnly],
+        permission_classes = [ActiveStaff],
         methods=["get"]
     )
     def teams(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
 
-class CountryListAPIView(ListAPIView):
+class CountryListAPIView(StaffAuditMixin, ListAPIView):
     queryset = Country.objects.all()
     serializer_class = CountrySerializer
     throttle_classes = [ScopedRateThrottle]
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [ActiveStaff]
 
 
-class LeagueListAPIView(ListAPIView):
+class LeagueListAPIView(StaffAuditMixin, ListAPIView):
     queryset = League.objects.all()
     serializer_class = LeagueModelSerializer
     throttle_classes = [ScopedRateThrottle]
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [ActiveStaff]
 
 
-class TeamListAPIView(ListAPIView):
+class TeamListAPIView(StaffAuditMixin, ListAPIView):
     queryset = Team.objects.all()
     serializer_class = TeamModelSerializer
     throttle_classes = [ScopedRateThrottle]
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [ActiveStaff]

@@ -6,10 +6,12 @@ from django.test import TestCase
 
 class HealthEndpointTests(TestCase):
     def test_liveness_is_dependency_free(self):
-        response = self.client.get("/health/live/")
+        with self.assertNumQueries(0), mock.patch("conf.health.cache") as cache:
+            response = self.client.get("/health/live/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"status": "ok", "service": "sanfootball"})
+        self.assertEqual(response.json(), {"status": "ok", "service": "90Nutmegs"})
+        self.assertEqual(cache.mock_calls, [])
 
     def test_readiness_checks_database(self):
         response = self.client.get("/health/ready/")

@@ -1,6 +1,6 @@
 import typing
 
-from core.loading import get_model
+from django.apps import apps
 from django.conf import settings
 from django.db import models
 from django.db.models import Max, Min
@@ -128,7 +128,7 @@ class Queue(models.Model):
     @classmethod
     def _get_item(cls, item_id: str, app_label: str) -> Episode | PlayList | Podcast:
         label, model_name = app_label.split(".", maxsplit=1)
-        model = get_model(label, model_name)
+        model = apps.get_model(label, model_name)
         return get_object_or_404(model, pk=item_id)
 
     def _calculate_positions(self, count: int, override: bool = False) -> list[int]:

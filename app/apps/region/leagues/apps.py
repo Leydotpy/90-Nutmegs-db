@@ -1,5 +1,5 @@
+from django.apps import AppConfig
 from django.utils.translation import gettext_lazy as _
-from core.application import AppConfig
 
 
 class LeaguesConfig(AppConfig):
@@ -8,7 +8,5 @@ class LeaguesConfig(AppConfig):
     label = "leagues"
     verbose_name = _("Leagues")
 
-    namespace = "leagues"
-
     def ready(self):
-        from apps.region.leagues import receivers # NOQA
+        from apps.region.leagues import receivers  # noqa: F401

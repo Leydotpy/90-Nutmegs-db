@@ -3,10 +3,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers as ser
 
-from api.rest.core import get_model
+from apps.comments.models import Comment
 from api.rest.web.serializers.auth import UserDisplaySerializer
-
-Comment = get_model("comments", "Comment")
 
 User = settings.AUTH_USER_MODEL
 

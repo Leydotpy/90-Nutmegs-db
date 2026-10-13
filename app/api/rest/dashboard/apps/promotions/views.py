@@ -1,6 +1,9 @@
+from __future__ import annotations
+
+from api.rest.dashboard.audit import StaffAuditMixin
+from api.rest.dashboard.permissions import ActiveStaff
 """Dashboard view layer for managing remote image promotions."""
 
-from __future__ import annotations
 
 import json
 
@@ -58,10 +61,10 @@ def _apply_remote_status(instance: Image, payload: dict) -> None:
         )
 
 
-class ImagePromotionViewSet(viewsets.ModelViewSet):
+class ImagePromotionViewSet(StaffAuditMixin, viewsets.ModelViewSet):
     """CRUD API for image promotions backed by Giffy-generated banner assets."""
 
-    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+    permission_classes = [ActiveStaff]
     parser_classes = [MultiPartParser, FormParser]
 
     def get_queryset(self):

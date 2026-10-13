@@ -1,22 +1,4 @@
-# pylint: disable=W0212, W0201, W0632
-import logging
-import operator
-from os.path import basename, join
-from urllib.error import HTTPError
-from urllib.parse import urlsplit, parse_qs
-
-from django.conf import settings as django_settings
-from django.core.files import File
-from django.db import IntegrityError
-from django.utils.functional import cached_property
-from rest_framework import serializers, relations
-from rest_framework.fields import get_attribute
-
-from api.rest.utils import settings
-from api.rest.utils.exists import bound_unique_together_get_or_create
-from api.rest.utils.loading import get_api_class
-
-logger = logging.getLogger(__name__)
+from rest_framework import serializers
 
 
 class TagsField(serializers.Field):
@@ -45,7 +27,7 @@ class TagsField(serializers.Field):
         if isinstance(value, list):
             items = [str(v).strip() for v in value if str(v).strip()]
         else:
-            items = [v.strip() for v in str(value).split(',') if v.strip()]
+            items = [v.strip() for v in str(value).split(",") if v.strip()]
 
         # Render based on option
         if self.render_as_list:
@@ -60,5 +42,5 @@ class TagsField(serializers.Field):
         if isinstance(data, list):
             return [str(v).strip() for v in data if str(v).strip()]
         if isinstance(data, str):
-            return [v.strip() for v in data.split(',') if v.strip()]
+            return [v.strip() for v in data.split(",") if v.strip()]
         raise serializers.ValidationError("Expected a list of strings or a comma-separated string.")

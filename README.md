@@ -1,4 +1,36 @@
-# SANFootball Concern-Split Codex Execution Pack
+# 90nutmgs backend (SANFootball)
+
+This repository contains a Django/DRF modular monolith in `app/` and the controlled SANFootball implementation programme below. Python **3.14 or newer** is required; use the committed `uv.lock` for reproducible dependencies.
+
+```bash
+uv sync --locked --extra dev
+uv run --locked python app/manage.py check --settings=conf.settings.test
+uv run --locked python app/manage.py test --settings=conf.settings.test
+```
+
+The approved SF-00 [baseline validation](docs/baseline-validation.md) records the original failures and limitations. SF-01 fixes the stale liveness assertion and scoped test formatting, and adds characterization coverage; see [testing](docs/testing.md). SF-03 updates the audited dependencies and introduces separate web/worker process commands; see the runtime and dependency guides below. Current results and review state are in the [execution ledger](SANFOOTBALL_IMPLEMENTATION_STATUS.md).
+
+For local development, review `.env.example`, select `conf.settings.development`, migrate a **local disposable database**, and run the development server:
+
+```bash
+uv run --locked python app/manage.py migrate --settings=conf.settings.development
+uv run --locked python app/manage.py runserver --settings=conf.settings.development
+```
+
+Development defaults to SQLite/locmem. Test settings isolate external services. WSGI, ASGI and Celery default to production settings, which require PostgreSQL, Redis, identity and media configuration. Development startup does not establish that provider-backed operations work. Optional `media-workers` and `recommendation-workers` extras supply heavyweight dependencies; they are not installed by the commands above. Never enable the production R2 cutover confirmation merely to bypass startup validation.
+
+Read [configuration and secret handling](docs/configuration.md) before selecting production settings, setting proxy trust/HSTS, or rotating credentials. Production requires explicit HTTPS public/Giffy endpoints; `.env.example` is a local template, not a deployment configuration.
+
+- [Current architecture](docs/architecture-current.md) — current owners, compatibility paths, infrastructure and unknowns.
+- [Evidence inventory](docs/baseline-inventory.md) — apps, models/relations, migrations, routes, tasks/signals, tests and dependencies.
+- [SF-00 design note](docs/refactor-plan.md) — scope, decisions, rollback and approval boundary.
+- [Runtime processes](docs/runtime.md) — web/worker/scheduler commands, queue rollout and shutdown budgets.
+- [Identity and authorization](docs/identity-and-authorization.md) — canonical Clerk mapping, staff access, privacy and audit contracts.
+- [API structure](docs/api-structure.md) — URL includes, feature ownership and compatibility verification.
+- [Dependencies](docs/dependencies.md) — install profiles, supported runtime, audit results and upgrade procedure.
+- [Execution ledger](SANFOOTBALL_IMPLEMENTATION_STATUS.md) — sole concern tracker and risk/action record.
+
+## Controlled implementation programme
 
 This package decomposes the SANFootball master implementation programme into **46 narrow, reviewable concern agents** with explicit dependencies and human approval gates.
 

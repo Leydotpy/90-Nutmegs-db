@@ -1,0 +1,2958 @@
+{
+  "routes": [
+    {
+      "route": "health/live/",
+      "name": "health-live",
+      "callback": "conf.health.liveness",
+      "methods": null,
+      "permissions": []
+    },
+    {
+      "route": "health/ready/",
+      "name": "health-ready",
+      "callback": "conf.health.readiness",
+      "methods": null,
+      "permissions": []
+    },
+    {
+      "route": "api/rest/web/apps/media/audio/add/",
+      "name": "api_apps:media_web_api:add_audio",
+      "callback": "api.rest.web.apps.media.audio.views.MediaAudioAPIView",
+      "methods": {
+        "post": "post",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.AllowAny"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/media/offline/devices/register/",
+      "name": "api_apps:media_web_api:media_offline_web_api:register_device",
+      "callback": "api.rest.web.apps.media.offline.views.WrappedAPIView",
+      "methods": {
+        "options": "options",
+        "post": "post"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/media/offline/packages/request/",
+      "name": "api_apps:media_web_api:media_offline_web_api:request_offline_package",
+      "callback": "api.rest.web.apps.media.offline.views.WrappedAPIView",
+      "methods": {
+        "options": "options",
+        "post": "post"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/media/offline/packages/status/<str:task_id>/",
+      "name": "api_apps:media_web_api:media_offline_web_api:packaging_status",
+      "callback": "api.rest.web.apps.media.offline.views.WrappedAPIView",
+      "methods": {
+        "options": "options",
+        "get": "get"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/media/offline/licenses/<uuid:license_id>/revoke/",
+      "name": "api_apps:media_web_api:media_offline_web_api:revoke_offline_license",
+      "callback": "api.rest.web.apps.media.offline.views.WrappedAPIView",
+      "methods": {
+        "options": "options",
+        "post": "post"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/media/streaming/episodes/<uuid:episode_id>/stream/",
+      "name": "api_apps:media_web_api:media_streaming_web_api:stream_episode_progressive",
+      "callback": "api.rest.web.apps.media.streaming.views.WrappedAPIView",
+      "methods": {
+        "options": "options",
+        "get": "get"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/podcast/auto/",
+      "name": "api_apps:podcast_web_api:auto",
+      "callback": "api.rest.web.apps.podcasts.views.AutomaticPromotionAPIView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.AllowAny"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/podcast/handpicked/",
+      "name": "api_apps:podcast_web_api:handpicked",
+      "callback": "api.rest.web.apps.podcasts.views.HandpickedPromotionsAPIView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.AllowAny"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/podcast/promotions/",
+      "name": "api_apps:podcast_web_api:promotions",
+      "callback": "api.rest.web.apps.podcasts.views.PromotionsAPIView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.AllowAny"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/podcast/trending/",
+      "name": "api_apps:podcast_web_api:trending-podcast",
+      "callback": "api.rest.web.apps.podcasts.views.TrendingPodcastAPIView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.AllowAny"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/podcast/recently-viewed/",
+      "name": "api_apps:podcast_web_api:recently-viewed",
+      "callback": "api.rest.web.apps.podcasts.views.RecentlyViewedPodcastAPIView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.AllowAny"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/podcast/recently-played/",
+      "name": "api_apps:podcast_web_api:recently-played",
+      "callback": "api.rest.web.apps.podcasts.views.PlayBackListApiView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/podcast/resume-playback/",
+      "name": "api_apps:podcast_web_api:resume-playback",
+      "callback": "api.rest.web.apps.podcasts.views.PlaybackUncompletedListAPIView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/podcast/<slug:slug>/",
+      "name": "api_apps:podcast_web_api:podcast-detail",
+      "callback": "api.rest.web.apps.podcasts.views.PodcastDetailAPIView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.AllowAny"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/podcast/<slug:slug>/episodes/",
+      "name": "api_apps:podcast_web_api:episodes-list",
+      "callback": "api.rest.web.apps.podcasts.views.EpisodeListAPIView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.AllowAny"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/podcast/episode/<slug:slug>/",
+      "name": "api_apps:podcast_web_api:episode-detail",
+      "callback": "api.rest.web.apps.podcasts.views.EpisodeDetailAPIView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.AllowAny"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/podcast/episode/<slug:slug>/update-playback",
+      "name": "api_apps:podcast_web_api:episode-update-playback",
+      "callback": "api.rest.web.apps.podcasts.views.PlaybackUpdateAPIView",
+      "methods": {
+        "put": "put",
+        "patch": "patch",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/profile/subscribe/",
+      "name": "api_apps:profile_web_api:user-subscription",
+      "callback": "api.rest.web.apps.profile.views.UserSubscriptionAPIView",
+      "methods": {
+        "post": "post",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/profile/subscriptions/podcast/",
+      "name": "api_apps:profile_web_api:subscriptions",
+      "callback": "api.rest.web.apps.profile.views.SubscribedListPodcastAPIView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/profile/playlists/featured/",
+      "name": "api_apps:profile_web_api:featured-playlist",
+      "callback": "api.rest.web.apps.profile.views.FeaturedPlayListAPIView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.AllowAny"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/profile/playlists/",
+      "name": "api_apps:profile_web_api:add-to-playlist",
+      "callback": "api.rest.web.apps.profile.views.PlaylistUserViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/profile/playlists/<int:pk>/",
+      "name": "api_apps:profile_web_api:playlist-detail",
+      "callback": "api.rest.web.apps.profile.views.PlaylistUserViewSet",
+      "methods": {
+        "get": "view_item",
+        "put": "update",
+        "delete": "destroy",
+        "patch": "partial_update"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/profile/playlist/<int:pk>/add",
+      "name": "api_apps:profile_web_api:add-to-playlist",
+      "callback": "api.rest.web.apps.profile.views.PlaylistUserViewSet",
+      "methods": {
+        "post": "add_item"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/profile/playlist/<int:pk>/remove",
+      "name": "api_apps:profile_web_api:remove-from-playlist",
+      "callback": "api.rest.web.apps.profile.views.PlaylistUserViewSet",
+      "methods": {
+        "post": "remove_item"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/profile/playlist/<int:pk>/reorder",
+      "name": "api_apps:profile_web_api:reorder-playlist",
+      "callback": "api.rest.web.apps.profile.views.PlaylistUserViewSet",
+      "methods": {
+        "post": "reorder"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/comment/create/",
+      "name": "api_apps:comment_web_api:create",
+      "callback": "api.rest.web.apps.comments.views.CommentCreateAPIView",
+      "methods": {
+        "post": "post",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/queue/",
+      "name": "api_apps:queue_web_api:queue",
+      "callback": "api.rest.web.apps.queue.views.QueueViewSet",
+      "methods": {
+        "get": "list"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/queue/add/",
+      "name": "api_apps:queue_web_api:queue-add",
+      "callback": "api.rest.web.apps.queue.views.QueueViewSet",
+      "methods": {
+        "post": "add"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/queue/clear/",
+      "name": "api_apps:queue_web_api:queue-clear",
+      "callback": "api.rest.web.apps.queue.views.QueueViewSet",
+      "methods": {
+        "put": "clear"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/web/apps/queue/<uuid:episode_id>/remove/",
+      "name": "api_apps:queue_web_api:queue-item-remove",
+      "callback": "api.rest.web.apps.queue.views.QueueViewSet",
+      "methods": {
+        "delete": "remove"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/web/explore/",
+      "name": "explore",
+      "callback": "api.rest.web.views.ExploreAPIView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.AllowAny"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/^$",
+      "name": "match-list",
+      "callback": "api.rest.dashboard.apps.match.views.MatchViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/^\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "match-list",
+      "callback": "api.rest.dashboard.apps.match.views.MatchViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/^(?P<pk>[^/.]+)/$",
+      "name": "match-detail",
+      "callback": "api.rest.dashboard.apps.match.views.MatchViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/^(?P<pk>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "match-detail",
+      "callback": "api.rest.dashboard.apps.match.views.MatchViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/^(?P<pk>[^/.]+)/live/booking/$",
+      "name": "match-create-booking",
+      "callback": "api.rest.dashboard.apps.match.views.MatchViewSet",
+      "methods": {
+        "post": "create_booking"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/^(?P<pk>[^/.]+)/live/booking\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "match-create-booking",
+      "callback": "api.rest.dashboard.apps.match.views.MatchViewSet",
+      "methods": {
+        "post": "create_booking"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/^(?P<pk>[^/.]+)/live/foul/$",
+      "name": "match-create-foul",
+      "callback": "api.rest.dashboard.apps.match.views.MatchViewSet",
+      "methods": {
+        "post": "create_foul"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/^(?P<pk>[^/.]+)/live/foul\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "match-create-foul",
+      "callback": "api.rest.dashboard.apps.match.views.MatchViewSet",
+      "methods": {
+        "post": "create_foul"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/^(?P<pk>[^/.]+)/live/goal/$",
+      "name": "match-create-goal",
+      "callback": "api.rest.dashboard.apps.match.views.MatchViewSet",
+      "methods": {
+        "post": "create_goal"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/^(?P<pk>[^/.]+)/live/goal\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "match-create-goal",
+      "callback": "api.rest.dashboard.apps.match.views.MatchViewSet",
+      "methods": {
+        "post": "create_goal"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/^(?P<pk>[^/.]+)/live/set-piece/$",
+      "name": "match-create-set-piece",
+      "callback": "api.rest.dashboard.apps.match.views.MatchViewSet",
+      "methods": {
+        "post": "create_set_piece"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/^(?P<pk>[^/.]+)/live/set-piece\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "match-create-set-piece",
+      "callback": "api.rest.dashboard.apps.match.views.MatchViewSet",
+      "methods": {
+        "post": "create_set_piece"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/^(?P<pk>[^/.]+)/live/shot/$",
+      "name": "match-create-shot",
+      "callback": "api.rest.dashboard.apps.match.views.MatchViewSet",
+      "methods": {
+        "post": "create_shot"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/^(?P<pk>[^/.]+)/live/shot\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "match-create-shot",
+      "callback": "api.rest.dashboard.apps.match.views.MatchViewSet",
+      "methods": {
+        "post": "create_shot"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/^(?P<pk>[^/.]+)/live/substitution/$",
+      "name": "match-create-substitution",
+      "callback": "api.rest.dashboard.apps.match.views.MatchViewSet",
+      "methods": {
+        "post": "create_substitution"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/^(?P<pk>[^/.]+)/live/substitution\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "match-create-substitution",
+      "callback": "api.rest.dashboard.apps.match.views.MatchViewSet",
+      "methods": {
+        "post": "create_substitution"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/^(?P<pk>[^/.]+)/lineups/$",
+      "name": "match-match-lineups",
+      "callback": "api.rest.dashboard.apps.match.views.MatchViewSet",
+      "methods": {
+        "post": "match_lineups"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/^(?P<pk>[^/.]+)/lineups\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "match-match-lineups",
+      "callback": "api.rest.dashboard.apps.match.views.MatchViewSet",
+      "methods": {
+        "post": "match_lineups"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/^(?P<pk>[^/.]+)/timeline/$",
+      "name": "match-timeline",
+      "callback": "api.rest.dashboard.apps.match.views.MatchViewSet",
+      "methods": {
+        "get": "timeline"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/^(?P<pk>[^/.]+)/timeline\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "match-timeline",
+      "callback": "api.rest.dashboard.apps.match.views.MatchViewSet",
+      "methods": {
+        "get": "timeline"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/^(?P<pk>[^/.]+)/lineups/$",
+      "name": "match-update-lineups",
+      "callback": "api.rest.dashboard.apps.match.views.MatchViewSet",
+      "methods": {
+        "patch": "update_lineups"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/^(?P<pk>[^/.]+)/lineups\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "match-update-lineups",
+      "callback": "api.rest.dashboard.apps.match.views.MatchViewSet",
+      "methods": {
+        "patch": "update_lineups"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/",
+      "name": "api-root",
+      "callback": "rest_framework.routers.APIRootView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/matches/<drf_format_suffix:format>",
+      "name": "api-root",
+      "callback": "rest_framework.routers.APIRootView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^features/$",
+      "name": "memberships:feature-list",
+      "callback": "api.rest.dashboard.apps.memberships.views.FeatureViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^features\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "memberships:feature-list",
+      "callback": "api.rest.dashboard.apps.memberships.views.FeatureViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^features/(?P<pk>[^/.]+)/$",
+      "name": "memberships:feature-detail",
+      "callback": "api.rest.dashboard.apps.memberships.views.FeatureViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^features/(?P<pk>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "memberships:feature-detail",
+      "callback": "api.rest.dashboard.apps.memberships.views.FeatureViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^plans/$",
+      "name": "memberships:plan-list",
+      "callback": "api.rest.dashboard.apps.memberships.views.PlanViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^plans\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "memberships:plan-list",
+      "callback": "api.rest.dashboard.apps.memberships.views.PlanViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^plans/(?P<pk>[^/.]+)/$",
+      "name": "memberships:plan-detail",
+      "callback": "api.rest.dashboard.apps.memberships.views.PlanViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^plans/(?P<pk>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "memberships:plan-detail",
+      "callback": "api.rest.dashboard.apps.memberships.views.PlanViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^plans/(?P<pk>[^/.]+)/add_feature/$",
+      "name": "memberships:plan-add-feature",
+      "callback": "api.rest.dashboard.apps.memberships.views.PlanViewSet",
+      "methods": {
+        "post": "add_feature"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^plans/(?P<pk>[^/.]+)/add_feature\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "memberships:plan-add-feature",
+      "callback": "api.rest.dashboard.apps.memberships.views.PlanViewSet",
+      "methods": {
+        "post": "add_feature"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^plan-features/$",
+      "name": "memberships:planfeature-list",
+      "callback": "api.rest.dashboard.apps.memberships.views.PlanFeatureViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^plan-features\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "memberships:planfeature-list",
+      "callback": "api.rest.dashboard.apps.memberships.views.PlanFeatureViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^plan-features/(?P<pk>[^/.]+)/$",
+      "name": "memberships:planfeature-detail",
+      "callback": "api.rest.dashboard.apps.memberships.views.PlanFeatureViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^plan-features/(?P<pk>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "memberships:planfeature-detail",
+      "callback": "api.rest.dashboard.apps.memberships.views.PlanFeatureViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^entitlements/$",
+      "name": "memberships:entitlement-list",
+      "callback": "api.rest.dashboard.apps.memberships.views.EntitlementViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^entitlements\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "memberships:entitlement-list",
+      "callback": "api.rest.dashboard.apps.memberships.views.EntitlementViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^entitlements/(?P<pk>[^/.]+)/$",
+      "name": "memberships:entitlement-detail",
+      "callback": "api.rest.dashboard.apps.memberships.views.EntitlementViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^entitlements/(?P<pk>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "memberships:entitlement-detail",
+      "callback": "api.rest.dashboard.apps.memberships.views.EntitlementViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^subscriptions/$",
+      "name": "memberships:subscription-list",
+      "callback": "api.rest.dashboard.apps.memberships.views.SubscriptionViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^subscriptions\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "memberships:subscription-list",
+      "callback": "api.rest.dashboard.apps.memberships.views.SubscriptionViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^subscriptions/(?P<pk>[^/.]+)/$",
+      "name": "memberships:subscription-detail",
+      "callback": "api.rest.dashboard.apps.memberships.views.SubscriptionViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^subscriptions/(?P<pk>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "memberships:subscription-detail",
+      "callback": "api.rest.dashboard.apps.memberships.views.SubscriptionViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^$",
+      "name": "memberships:membership-list",
+      "callback": "api.rest.dashboard.apps.memberships.views.MembershipViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "memberships:membership-list",
+      "callback": "api.rest.dashboard.apps.memberships.views.MembershipViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^(?P<pk>[^/.]+)/$",
+      "name": "memberships:membership-detail",
+      "callback": "api.rest.dashboard.apps.memberships.views.MembershipViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/^(?P<pk>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "memberships:membership-detail",
+      "callback": "api.rest.dashboard.apps.memberships.views.MembershipViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "api.rest.dashboard.apps.memberships.views.IsStaffReadOnlyOrSuperuser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/",
+      "name": "memberships:api-root",
+      "callback": "rest_framework.routers.APIRootView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/memberships/<drf_format_suffix:format>",
+      "name": "memberships:api-root",
+      "callback": "rest_framework.routers.APIRootView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^seasons/$",
+      "name": "season-list",
+      "callback": "api.rest.dashboard.apps.podcasts.views.SeasonViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^seasons\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "season-list",
+      "callback": "api.rest.dashboard.apps.podcasts.views.SeasonViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^seasons/(?P<pk>[^/.]+)/$",
+      "name": "season-detail",
+      "callback": "api.rest.dashboard.apps.podcasts.views.SeasonViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^seasons/(?P<pk>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "season-detail",
+      "callback": "api.rest.dashboard.apps.podcasts.views.SeasonViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^episodes/$",
+      "name": "episode-list",
+      "callback": "api.rest.dashboard.apps.podcasts.views.EpisodeViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^episodes\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "episode-list",
+      "callback": "api.rest.dashboard.apps.podcasts.views.EpisodeViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^episodes/(?P<pk>[^/.]+)/$",
+      "name": "episode-detail",
+      "callback": "api.rest.dashboard.apps.podcasts.views.EpisodeViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^episodes/(?P<pk>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "episode-detail",
+      "callback": "api.rest.dashboard.apps.podcasts.views.EpisodeViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^episodes/(?P<pk>[^/.]+)/audios/$",
+      "name": "episode-audios",
+      "callback": "api.rest.dashboard.apps.podcasts.views.EpisodeViewSet",
+      "methods": {
+        "get": "audios"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^episodes/(?P<pk>[^/.]+)/audios\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "episode-audios",
+      "callback": "api.rest.dashboard.apps.podcasts.views.EpisodeViewSet",
+      "methods": {
+        "get": "audios"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^episodes/(?P<pk>[^/.]+)/audio/(?P<audio_id>[^/.]+)/$",
+      "name": "episode-delete-audio",
+      "callback": "api.rest.dashboard.apps.podcasts.views.EpisodeViewSet",
+      "methods": {
+        "delete": "delete_audio"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^episodes/(?P<pk>[^/.]+)/audio/(?P<audio_id>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "episode-delete-audio",
+      "callback": "api.rest.dashboard.apps.podcasts.views.EpisodeViewSet",
+      "methods": {
+        "delete": "delete_audio"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^episodes/(?P<pk>[^/.]+)/images/(?P<image_id>[^/.]+)/$",
+      "name": "episode-delete-image",
+      "callback": "api.rest.dashboard.apps.podcasts.views.EpisodeViewSet",
+      "methods": {
+        "delete": "delete_image"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^episodes/(?P<pk>[^/.]+)/images/(?P<image_id>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "episode-delete-image",
+      "callback": "api.rest.dashboard.apps.podcasts.views.EpisodeViewSet",
+      "methods": {
+        "delete": "delete_image"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^episodes/(?P<pk>[^/.]+)/audio/(?P<audio_id>[^/.]+)/$",
+      "name": "episode-update-audio",
+      "callback": "api.rest.dashboard.apps.podcasts.views.EpisodeViewSet",
+      "methods": {
+        "patch": "update_audio"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^episodes/(?P<pk>[^/.]+)/audio/(?P<audio_id>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "episode-update-audio",
+      "callback": "api.rest.dashboard.apps.podcasts.views.EpisodeViewSet",
+      "methods": {
+        "patch": "update_audio"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^episodes/(?P<pk>[^/.]+)/upload_audio/$",
+      "name": "episode-upload-audio",
+      "callback": "api.rest.dashboard.apps.podcasts.views.EpisodeViewSet",
+      "methods": {
+        "post": "upload_audio"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^episodes/(?P<pk>[^/.]+)/upload_audio\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "episode-upload-audio",
+      "callback": "api.rest.dashboard.apps.podcasts.views.EpisodeViewSet",
+      "methods": {
+        "post": "upload_audio"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^episodes/(?P<pk>[^/.]+)/images/$",
+      "name": "episode-upload-image",
+      "callback": "api.rest.dashboard.apps.podcasts.views.EpisodeViewSet",
+      "methods": {
+        "post": "upload_image"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^episodes/(?P<pk>[^/.]+)/images\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "episode-upload-image",
+      "callback": "api.rest.dashboard.apps.podcasts.views.EpisodeViewSet",
+      "methods": {
+        "post": "upload_image"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^$",
+      "name": "podcasts-list",
+      "callback": "api.rest.dashboard.apps.podcasts.views.PodcastViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "podcasts-list",
+      "callback": "api.rest.dashboard.apps.podcasts.views.PodcastViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^(?P<pk>[^/.]+)/$",
+      "name": "podcasts-detail",
+      "callback": "api.rest.dashboard.apps.podcasts.views.PodcastViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^(?P<pk>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "podcasts-detail",
+      "callback": "api.rest.dashboard.apps.podcasts.views.PodcastViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^(?P<pk>[^/.]+)/images/(?P<image_id>[^/.]+)/$",
+      "name": "podcasts-delete-image",
+      "callback": "api.rest.dashboard.apps.podcasts.views.PodcastViewSet",
+      "methods": {
+        "delete": "delete_image"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^(?P<pk>[^/.]+)/images/(?P<image_id>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "podcasts-delete-image",
+      "callback": "api.rest.dashboard.apps.podcasts.views.PodcastViewSet",
+      "methods": {
+        "delete": "delete_image"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^(?P<pk>[^/.]+)/episodes/$",
+      "name": "podcasts-episodes",
+      "callback": "api.rest.dashboard.apps.podcasts.views.PodcastViewSet",
+      "methods": {
+        "get": "episodes"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^(?P<pk>[^/.]+)/episodes\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "podcasts-episodes",
+      "callback": "api.rest.dashboard.apps.podcasts.views.PodcastViewSet",
+      "methods": {
+        "get": "episodes"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^(?P<pk>[^/.]+)/seasons/$",
+      "name": "podcasts-seasons",
+      "callback": "api.rest.dashboard.apps.podcasts.views.PodcastViewSet",
+      "methods": {
+        "get": "seasons"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^(?P<pk>[^/.]+)/seasons\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "podcasts-seasons",
+      "callback": "api.rest.dashboard.apps.podcasts.views.PodcastViewSet",
+      "methods": {
+        "get": "seasons"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^(?P<pk>[^/.]+)/images/$",
+      "name": "podcasts-upload-image",
+      "callback": "api.rest.dashboard.apps.podcasts.views.PodcastViewSet",
+      "methods": {
+        "post": "upload_image"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/^(?P<pk>[^/.]+)/images\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "podcasts-upload-image",
+      "callback": "api.rest.dashboard.apps.podcasts.views.PodcastViewSet",
+      "methods": {
+        "post": "upload_image"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/",
+      "name": "api-root",
+      "callback": "rest_framework.routers.APIRootView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/podcasts/<drf_format_suffix:format>",
+      "name": "api-root",
+      "callback": "rest_framework.routers.APIRootView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/promotions/^images/$",
+      "name": "promotions_dashboard_api:promotion-image-list",
+      "callback": "api.rest.dashboard.apps.promotions.views.ImagePromotionViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/promotions/^images\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "promotions_dashboard_api:promotion-image-list",
+      "callback": "api.rest.dashboard.apps.promotions.views.ImagePromotionViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/promotions/^images/(?P<pk>[^/.]+)/$",
+      "name": "promotions_dashboard_api:promotion-image-detail",
+      "callback": "api.rest.dashboard.apps.promotions.views.ImagePromotionViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/promotions/^images/(?P<pk>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "promotions_dashboard_api:promotion-image-detail",
+      "callback": "api.rest.dashboard.apps.promotions.views.ImagePromotionViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/promotions/^images/(?P<pk>[^/.]+)/refresh-status/$",
+      "name": "promotions_dashboard_api:promotion-image-refresh-status",
+      "callback": "api.rest.dashboard.apps.promotions.views.ImagePromotionViewSet",
+      "methods": {
+        "post": "refresh_status"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/promotions/^images/(?P<pk>[^/.]+)/refresh-status\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "promotions_dashboard_api:promotion-image-refresh-status",
+      "callback": "api.rest.dashboard.apps.promotions.views.ImagePromotionViewSet",
+      "methods": {
+        "post": "refresh_status"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.IsAdminUser"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/promotions/",
+      "name": "promotions_dashboard_api:api-root",
+      "callback": "rest_framework.routers.APIRootView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/promotions/<drf_format_suffix:format>",
+      "name": "promotions_dashboard_api:api-root",
+      "callback": "rest_framework.routers.APIRootView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/promotions/callbacks/giffy/",
+      "name": "promotions_dashboard_api:giffy-callback",
+      "callback": "api.rest.dashboard.apps.promotions.views.GiffyCallbackAPIView",
+      "methods": {
+        "post": "post",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.AllowAny"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/persons/^players/$",
+      "name": "player-list",
+      "callback": "api.rest.dashboard.apps.persons.views.PlayerViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/persons/^players\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "player-list",
+      "callback": "api.rest.dashboard.apps.persons.views.PlayerViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/persons/^players/injury-types/$",
+      "name": "player-injury-types",
+      "callback": "api.rest.dashboard.apps.persons.views.PlayerViewSet",
+      "methods": {
+        "get": "injury_types",
+        "post": "injury_types"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/persons/^players/injury-types\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "player-injury-types",
+      "callback": "api.rest.dashboard.apps.persons.views.PlayerViewSet",
+      "methods": {
+        "get": "injury_types",
+        "post": "injury_types"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/persons/^players/(?P<pk>[^/.]+)/$",
+      "name": "player-detail",
+      "callback": "api.rest.dashboard.apps.persons.views.PlayerViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/persons/^players/(?P<pk>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "player-detail",
+      "callback": "api.rest.dashboard.apps.persons.views.PlayerViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/persons/^players/(?P<pk>[^/.]+)/transfer/(?P<transfer_pk>[^/.]+)/$",
+      "name": "player-contract",
+      "callback": "api.rest.dashboard.apps.persons.views.PlayerViewSet",
+      "methods": {
+        "get": "contract",
+        "delete": "contract"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/persons/^players/(?P<pk>[^/.]+)/transfer/(?P<transfer_pk>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "player-contract",
+      "callback": "api.rest.dashboard.apps.persons.views.PlayerViewSet",
+      "methods": {
+        "get": "contract",
+        "delete": "contract"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/persons/^players/(?P<pk>[^/.]+)/fitness/$",
+      "name": "player-fitness",
+      "callback": "api.rest.dashboard.apps.persons.views.PlayerViewSet",
+      "methods": {
+        "get": "fitness",
+        "post": "fitness",
+        "put": "fitness",
+        "patch": "fitness"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/persons/^players/(?P<pk>[^/.]+)/fitness\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "player-fitness",
+      "callback": "api.rest.dashboard.apps.persons.views.PlayerViewSet",
+      "methods": {
+        "get": "fitness",
+        "post": "fitness",
+        "put": "fitness",
+        "patch": "fitness"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/persons/^players/(?P<pk>[^/.]+)/injuries/$",
+      "name": "player-injuries",
+      "callback": "api.rest.dashboard.apps.persons.views.PlayerViewSet",
+      "methods": {
+        "get": "injuries",
+        "post": "injuries"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/persons/^players/(?P<pk>[^/.]+)/injuries\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "player-injuries",
+      "callback": "api.rest.dashboard.apps.persons.views.PlayerViewSet",
+      "methods": {
+        "get": "injuries",
+        "post": "injuries"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/persons/^players/(?P<pk>[^/.]+)/injuries/(?P<injury_pk>[^/.]+)/$",
+      "name": "player-injury-detail",
+      "callback": "api.rest.dashboard.apps.persons.views.PlayerViewSet",
+      "methods": {
+        "get": "injury_detail",
+        "put": "injury_detail",
+        "patch": "injury_detail",
+        "delete": "injury_detail"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/persons/^players/(?P<pk>[^/.]+)/injuries/(?P<injury_pk>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "player-injury-detail",
+      "callback": "api.rest.dashboard.apps.persons.views.PlayerViewSet",
+      "methods": {
+        "get": "injury_detail",
+        "put": "injury_detail",
+        "patch": "injury_detail",
+        "delete": "injury_detail"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/persons/^players/(?P<pk>[^/.]+)/transfers/$",
+      "name": "player-transfers",
+      "callback": "api.rest.dashboard.apps.persons.views.PlayerViewSet",
+      "methods": {
+        "get": "transfers",
+        "post": "transfers"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/persons/^players/(?P<pk>[^/.]+)/transfers\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "player-transfers",
+      "callback": "api.rest.dashboard.apps.persons.views.PlayerViewSet",
+      "methods": {
+        "get": "transfers",
+        "post": "transfers"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/persons/^staff/$",
+      "name": "staff-list",
+      "callback": "api.rest.dashboard.apps.persons.views.StaffViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/persons/^staff\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "staff-list",
+      "callback": "api.rest.dashboard.apps.persons.views.StaffViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/persons/^staff/(?P<pk>[^/.]+)/$",
+      "name": "staff-detail",
+      "callback": "api.rest.dashboard.apps.persons.views.StaffViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/persons/^staff/(?P<pk>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "staff-detail",
+      "callback": "api.rest.dashboard.apps.persons.views.StaffViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/persons/",
+      "name": "api-root",
+      "callback": "rest_framework.routers.APIRootView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/persons/<drf_format_suffix:format>",
+      "name": "api-root",
+      "callback": "rest_framework.routers.APIRootView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/regions/countries/",
+      "name": null,
+      "callback": "api.rest.dashboard.apps.region.views.CountryListAPIView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/regions/leagues/",
+      "name": null,
+      "callback": "api.rest.dashboard.apps.region.views.LeagueListAPIView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/regions/teams/",
+      "name": null,
+      "callback": "api.rest.dashboard.apps.region.views.TeamListAPIView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/regions/^$",
+      "name": "region-list",
+      "callback": "api.rest.dashboard.apps.region.views.RegionViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/regions/^\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "region-list",
+      "callback": "api.rest.dashboard.apps.region.views.RegionViewSet",
+      "methods": {
+        "get": "list",
+        "post": "create"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/regions/^(?P<pk>[^/.]+)/$",
+      "name": "region-detail",
+      "callback": "api.rest.dashboard.apps.region.views.RegionViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/regions/^(?P<pk>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "region-detail",
+      "callback": "api.rest.dashboard.apps.region.views.RegionViewSet",
+      "methods": {
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/regions/^(?P<pk>[^/.]+)/countries/$",
+      "name": "region-countries",
+      "callback": "api.rest.dashboard.apps.region.views.RegionViewSet",
+      "methods": {
+        "get": "countries",
+        "post": "countries"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/regions/^(?P<pk>[^/.]+)/countries\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "region-countries",
+      "callback": "api.rest.dashboard.apps.region.views.RegionViewSet",
+      "methods": {
+        "get": "countries",
+        "post": "countries"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/regions/^(?P<pk>[^/.]+)/countries/(?P<country_id>[^/.]+)/$",
+      "name": "region-country-detail",
+      "callback": "api.rest.dashboard.apps.region.views.RegionViewSet",
+      "methods": {
+        "get": "country_detail",
+        "put": "country_detail",
+        "patch": "country_detail",
+        "delete": "country_detail"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/regions/^(?P<pk>[^/.]+)/countries/(?P<country_id>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "region-country-detail",
+      "callback": "api.rest.dashboard.apps.region.views.RegionViewSet",
+      "methods": {
+        "get": "country_detail",
+        "put": "country_detail",
+        "patch": "country_detail",
+        "delete": "country_detail"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/regions/^(?P<pk>[^/.]+)/countries/(?P<country_id>[^/.]+)/leagues/(?P<league_id>[^/.]+)/$",
+      "name": "region-league-detail",
+      "callback": "api.rest.dashboard.apps.region.views.RegionViewSet",
+      "methods": {
+        "get": "league_detail",
+        "put": "league_detail",
+        "patch": "league_detail",
+        "delete": "league_detail"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/regions/^(?P<pk>[^/.]+)/countries/(?P<country_id>[^/.]+)/leagues/(?P<league_id>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "region-league-detail",
+      "callback": "api.rest.dashboard.apps.region.views.RegionViewSet",
+      "methods": {
+        "get": "league_detail",
+        "put": "league_detail",
+        "patch": "league_detail",
+        "delete": "league_detail"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/regions/^(?P<pk>[^/.]+)/countries/(?P<country_id>[^/.]+)/leagues/$",
+      "name": "region-leagues",
+      "callback": "api.rest.dashboard.apps.region.views.RegionViewSet",
+      "methods": {
+        "get": "leagues",
+        "post": "leagues"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/regions/^(?P<pk>[^/.]+)/countries/(?P<country_id>[^/.]+)/leagues\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "region-leagues",
+      "callback": "api.rest.dashboard.apps.region.views.RegionViewSet",
+      "methods": {
+        "get": "leagues",
+        "post": "leagues"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/regions/^(?P<pk>[^/.]+)/countries/(?P<country_id>[^/.]+)/leagues/(?P<league_id>[^/.]+)/teams/(?P<team_id>[^/.]+)/$",
+      "name": "region-team-detail",
+      "callback": "api.rest.dashboard.apps.region.views.RegionViewSet",
+      "methods": {
+        "get": "team_detail",
+        "put": "team_detail",
+        "patch": "team_detail",
+        "delete": "team_detail"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/regions/^(?P<pk>[^/.]+)/countries/(?P<country_id>[^/.]+)/leagues/(?P<league_id>[^/.]+)/teams/(?P<team_id>[^/.]+)\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "region-team-detail",
+      "callback": "api.rest.dashboard.apps.region.views.RegionViewSet",
+      "methods": {
+        "get": "team_detail",
+        "put": "team_detail",
+        "patch": "team_detail",
+        "delete": "team_detail"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/regions/^(?P<pk>[^/.]+)/countries/(?P<country_id>[^/.]+)/leagues/(?P<league_id>[^/.]+)/teams/$",
+      "name": "region-teams",
+      "callback": "api.rest.dashboard.apps.region.views.RegionViewSet",
+      "methods": {
+        "get": "teams",
+        "post": "teams"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/regions/^(?P<pk>[^/.]+)/countries/(?P<country_id>[^/.]+)/leagues/(?P<league_id>[^/.]+)/teams\\.(?P<format>[a-z0-9]+)/?$",
+      "name": "region-teams",
+      "callback": "api.rest.dashboard.apps.region.views.RegionViewSet",
+      "methods": {
+        "get": "teams",
+        "post": "teams"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/regions/",
+      "name": "api-root",
+      "callback": "rest_framework.routers.APIRootView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/apps/regions/<drf_format_suffix:format>",
+      "name": "api-root",
+      "callback": "rest_framework.routers.APIRootView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/schema/",
+      "name": "schema",
+      "callback": "drf_spectacular.views.SpectacularAPIView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.AllowAny"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/schema/swagger-ui/",
+      "name": "swagger-ui",
+      "callback": "drf_spectacular.views.SpectacularSwaggerView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.AllowAny"
+      ]
+    },
+    {
+      "route": "api/rest/dashboard/schema/redoc/",
+      "name": "redoc",
+      "callback": "drf_spectacular.views.SpectacularRedocView",
+      "methods": {
+        "get": "get",
+        "options": "options"
+      },
+      "permissions": [
+        "rest_framework.permissions.AllowAny"
+      ]
+    }
+  ],
+  "models": [
+    [
+      "admin.LogEntry",
+      "django_admin_log"
+    ],
+    [
+      "analytics.ObjectView",
+      "analytics_objectview"
+    ],
+    [
+      "audio.Audio",
+      "audio_audio"
+    ],
+    [
+      "auth.Group",
+      "auth_group"
+    ],
+    [
+      "auth.Permission",
+      "auth_permission"
+    ],
+    [
+      "billing.Bankcard",
+      "billing_bankcard"
+    ],
+    [
+      "billing.Source",
+      "billing_source"
+    ],
+    [
+      "billing.SourceType",
+      "billing_sourcetype"
+    ],
+    [
+      "billing.Transaction",
+      "billing_transaction"
+    ],
+    [
+      "category.Category",
+      "category_category"
+    ],
+    [
+      "chapters.Chapter",
+      "chapters_chapter"
+    ],
+    [
+      "clubs.Stadium",
+      "clubs_stadium"
+    ],
+    [
+      "clubs.Team",
+      "clubs_team"
+    ],
+    [
+      "comments.Comment",
+      "comments_comment"
+    ],
+    [
+      "contenttypes.ContentType",
+      "django_content_type"
+    ],
+    [
+      "django_celery_beat.ClockedSchedule",
+      "django_celery_beat_clockedschedule"
+    ],
+    [
+      "django_celery_beat.CrontabSchedule",
+      "django_celery_beat_crontabschedule"
+    ],
+    [
+      "django_celery_beat.IntervalSchedule",
+      "django_celery_beat_intervalschedule"
+    ],
+    [
+      "django_celery_beat.PeriodicTask",
+      "django_celery_beat_periodictask"
+    ],
+    [
+      "django_celery_beat.PeriodicTasks",
+      "django_celery_beat_periodictasks"
+    ],
+    [
+      "django_celery_beat.SolarSchedule",
+      "django_celery_beat_solarschedule"
+    ],
+    [
+      "django_celery_results.ChordCounter",
+      "django_celery_results_chordcounter"
+    ],
+    [
+      "django_celery_results.GroupResult",
+      "django_celery_results_groupresult"
+    ],
+    [
+      "django_celery_results.TaskResult",
+      "django_celery_results_taskresult"
+    ],
+    [
+      "flatpages.FlatPage",
+      "django_flatpage"
+    ],
+    [
+      "forum.Discussion",
+      "forum_discussion"
+    ],
+    [
+      "forum.Reply",
+      "forum_reply"
+    ],
+    [
+      "guardian.GroupObjectPermission",
+      "guardian_groupobjectpermission"
+    ],
+    [
+      "guardian.UserObjectPermission",
+      "guardian_userobjectpermission"
+    ],
+    [
+      "images.Image",
+      "images_image"
+    ],
+    [
+      "leagues.Campaign",
+      "leagues_campaign"
+    ],
+    [
+      "leagues.League",
+      "leagues_league"
+    ],
+    [
+      "match.Booking",
+      "match_booking"
+    ],
+    [
+      "match.Event",
+      "match_event"
+    ],
+    [
+      "match.Foul",
+      "match_foul"
+    ],
+    [
+      "match.FoulEvent",
+      "match_foulevent"
+    ],
+    [
+      "match.Goal",
+      "match_goal"
+    ],
+    [
+      "match.GoalEvent",
+      "match_goalevent"
+    ],
+    [
+      "match.Highlight",
+      "match_highlight"
+    ],
+    [
+      "match.Match",
+      "match_match"
+    ],
+    [
+      "match.Possession",
+      "match_possession"
+    ],
+    [
+      "match.SetPiece",
+      "match_setpiece"
+    ],
+    [
+      "match.Shot",
+      "match_shot"
+    ],
+    [
+      "match.Substitution",
+      "match_substitution"
+    ],
+    [
+      "match.TeamPossession",
+      "match_teampossession"
+    ],
+    [
+      "media.MediaAsset",
+      "media_mediaasset"
+    ],
+    [
+      "media.MediaLocation",
+      "media_medialocation"
+    ],
+    [
+      "media.MediaSettings",
+      "media_mediasettings"
+    ],
+    [
+      "media.MediaVariant",
+      "media_mediavariant"
+    ],
+    [
+      "media.PlayList",
+      "media_playlist"
+    ],
+    [
+      "media.PlaylistItem",
+      "media_playlistitem"
+    ],
+    [
+      "memberships.AddOn",
+      "memberships_addon"
+    ],
+    [
+      "memberships.Entitlement",
+      "memberships_entitlement"
+    ],
+    [
+      "memberships.Feature",
+      "memberships_feature"
+    ],
+    [
+      "memberships.Membership",
+      "memberships_membership"
+    ],
+    [
+      "memberships.Plan",
+      "plan"
+    ],
+    [
+      "memberships.PlanFeature",
+      "memberships_planfeature"
+    ],
+    [
+      "memberships.Subscription",
+      "memberships_subscription"
+    ],
+    [
+      "offline.Device",
+      "offline_device"
+    ],
+    [
+      "offline.License",
+      "offline_license"
+    ],
+    [
+      "offline.Package",
+      "offline_package"
+    ],
+    [
+      "offline.Packaging",
+      "offline_packaging"
+    ],
+    [
+      "persons.Contract",
+      "persons_contract"
+    ],
+    [
+      "persons.Fitness",
+      "persons_fitness"
+    ],
+    [
+      "persons.Injury",
+      "persons_injury"
+    ],
+    [
+      "persons.InjuryType",
+      "persons_injurytype"
+    ],
+    [
+      "persons.Player",
+      "persons_player"
+    ],
+    [
+      "persons.PlayerTransfer",
+      "persons_playertransfer"
+    ],
+    [
+      "persons.Staff",
+      "persons_staff"
+    ],
+    [
+      "persons.StaffTransfer",
+      "persons_stafftransfer"
+    ],
+    [
+      "podcasts.Episode",
+      "podcasts_episode"
+    ],
+    [
+      "podcasts.PlayBack",
+      "podcasts_playback"
+    ],
+    [
+      "podcasts.Podcast",
+      "podcasts_podcast"
+    ],
+    [
+      "podcasts.Season",
+      "podcasts_season"
+    ],
+    [
+      "podcasts.Summary",
+      "podcasts_summary"
+    ],
+    [
+      "polls.Choice",
+      "polls_choice"
+    ],
+    [
+      "polls.Poll",
+      "polls_poll"
+    ],
+    [
+      "posts.Post",
+      "posts_post"
+    ],
+    [
+      "posts.PostReaction",
+      "posts_postreaction"
+    ],
+    [
+      "promotions.AutomaticPostList",
+      "promotions_automaticpostlist"
+    ],
+    [
+      "promotions.HandPickedPostList",
+      "promotions_handpickedpostlist"
+    ],
+    [
+      "promotions.Image",
+      "promotions_image"
+    ],
+    [
+      "promotions.KeywordPromotion",
+      "promotions_keywordpromotion"
+    ],
+    [
+      "promotions.MultiImage",
+      "promotions_multiimage"
+    ],
+    [
+      "promotions.OrderedPodcast",
+      "promotions_orderedpodcast"
+    ],
+    [
+      "promotions.OrderedPostList",
+      "promotions_orderedpostlist"
+    ],
+    [
+      "promotions.PagePromotion",
+      "promotions_pagepromotion"
+    ],
+    [
+      "queue.Queue",
+      "queue_queue"
+    ],
+    [
+      "queue.QueueItem",
+      "queue_queueitem"
+    ],
+    [
+      "recommendation.UserCategoryAffinity",
+      "recommendation_usercategoryaffinity"
+    ],
+    [
+      "region.Country",
+      "region_country"
+    ],
+    [
+      "region.Region",
+      "region_region"
+    ],
+    [
+      "sessions.Session",
+      "django_session"
+    ],
+    [
+      "sites.Site",
+      "django_site"
+    ],
+    [
+      "tactics.Formation",
+      "tactics_formation"
+    ],
+    [
+      "tactics.FormationStyle",
+      "tactics_formationstyle"
+    ],
+    [
+      "tactics.LineUp",
+      "tactics_lineup"
+    ],
+    [
+      "tactics.MatchLineUp",
+      "tactics_matchlineup"
+    ],
+    [
+      "tactics.Position",
+      "tactics_position"
+    ],
+    [
+      "tactics.Shape",
+      "tactics_shape"
+    ],
+    [
+      "tactics.TeamLineUp",
+      "tactics_teamlineup"
+    ],
+    [
+      "thumbnail.Thumbnail",
+      "thumbnail_thumbnail"
+    ],
+    [
+      "transcription.Transcription",
+      "transcription_transcription"
+    ],
+    [
+      "transcription.TranscriptionBillingRecord",
+      "transcription_transcriptionbillingrecord"
+    ],
+    [
+      "transcription.UserTranscriptionQuota",
+      "transcription_usertranscriptionquota"
+    ],
+    [
+      "users.ClerkUser",
+      "users_clerkuser"
+    ],
+    [
+      "video.Video",
+      "video_video"
+    ]
+  ],
+  "admin": [
+    "analytics.ObjectView",
+    "audio.Audio",
+    "auth.Group",
+    "billing.Bankcard",
+    "billing.Source",
+    "billing.SourceType",
+    "billing.Transaction",
+    "category.Category",
+    "chapters.Chapter",
+    "clubs.Stadium",
+    "clubs.Team",
+    "comments.Comment",
+    "django_celery_beat.ClockedSchedule",
+    "django_celery_beat.CrontabSchedule",
+    "django_celery_beat.IntervalSchedule",
+    "django_celery_beat.PeriodicTask",
+    "django_celery_beat.SolarSchedule",
+    "django_celery_results.GroupResult",
+    "django_celery_results.TaskResult",
+    "flatpages.FlatPage",
+    "forum.Discussion",
+    "images.Image",
+    "leagues.Campaign",
+    "leagues.League",
+    "match.Booking",
+    "match.Event",
+    "match.Foul",
+    "match.Goal",
+    "match.Highlight",
+    "match.Match",
+    "match.Possession",
+    "match.SetPiece",
+    "match.Shot",
+    "match.Substitution",
+    "match.TeamPossession",
+    "media.MediaSettings",
+    "media.PlayList",
+    "memberships.AddOn",
+    "memberships.Entitlement",
+    "memberships.Feature",
+    "memberships.Membership",
+    "memberships.Plan",
+    "memberships.Subscription",
+    "offline.Device",
+    "offline.License",
+    "offline.Package",
+    "offline.Packaging",
+    "persons.Fitness",
+    "persons.Injury",
+    "persons.InjuryType",
+    "persons.Player",
+    "persons.Staff",
+    "podcasts.Episode",
+    "podcasts.Podcast",
+    "podcasts.Season",
+    "polls.Choice",
+    "polls.Poll",
+    "posts.Post",
+    "posts.PostReaction",
+    "promotions.AutomaticPostList",
+    "promotions.HandPickedPostList",
+    "promotions.Image",
+    "promotions.MultiImage",
+    "promotions.OrderedPodcast",
+    "promotions.OrderedPostList",
+    "queue.Queue",
+    "queue.QueueItem",
+    "recommendation.UserCategoryAffinity",
+    "region.Country",
+    "region.Region",
+    "sites.Site",
+    "tactics.Formation",
+    "tactics.FormationStyle",
+    "tactics.LineUp",
+    "tactics.MatchLineUp",
+    "tactics.Position",
+    "tactics.Shape",
+    "tactics.TeamLineUp",
+    "thumbnail.Thumbnail",
+    "transcription.Transcription",
+    "transcription.TranscriptionBillingRecord",
+    "transcription.UserTranscriptionQuota",
+    "users.ClerkUser",
+    "video.Video"
+  ],
+  "apps": [
+    [
+      "django.contrib.admin",
+      "admin"
+    ],
+    [
+      "django.contrib.auth",
+      "auth"
+    ],
+    [
+      "django.contrib.contenttypes",
+      "contenttypes"
+    ],
+    [
+      "django.contrib.sessions",
+      "sessions"
+    ],
+    [
+      "django.contrib.messages",
+      "messages"
+    ],
+    [
+      "django.contrib.staticfiles",
+      "staticfiles"
+    ],
+    [
+      "django.contrib.sites",
+      "sites"
+    ],
+    [
+      "django.contrib.flatpages",
+      "flatpages"
+    ],
+    [
+      "guardian",
+      "guardian"
+    ],
+    [
+      "django_filters",
+      "django_filters"
+    ],
+    [
+      "corsheaders",
+      "corsheaders"
+    ],
+    [
+      "rest_framework",
+      "rest_framework"
+    ],
+    [
+      "django_clerk_sdk",
+      "django_clerk_sdk"
+    ],
+    [
+      "django_clerk_sdk.users",
+      "users"
+    ],
+    [
+      "django_celery_results",
+      "django_celery_results"
+    ],
+    [
+      "django_celery_beat",
+      "django_celery_beat"
+    ],
+    [
+      "drf_spectacular",
+      "drf_spectacular"
+    ],
+    [
+      "drf_spectacular_sidecar",
+      "drf_spectacular_sidecar"
+    ],
+    [
+      "pycflare.django",
+      "pycflare_django"
+    ],
+    [
+      "api",
+      "api"
+    ],
+    [
+      "api.rest",
+      "rest"
+    ],
+    [
+      "api.rest.dashboard",
+      "dashboard_api"
+    ],
+    [
+      "api.rest.dashboard.apps",
+      "dashboard_apps_api"
+    ],
+    [
+      "api.rest.dashboard.apps.match",
+      "match_dashboard_api"
+    ],
+    [
+      "api.rest.dashboard.apps.persons",
+      "persons_dashboard_api"
+    ],
+    [
+      "api.rest.dashboard.apps.podcasts",
+      "podcasts_dashboard_api"
+    ],
+    [
+      "api.rest.dashboard.apps.promotions",
+      "promotions_dashboard_api"
+    ],
+    [
+      "api.rest.dashboard.apps.region",
+      "region_dashboard_api"
+    ],
+    [
+      "api.rest.dashboard.apps.memberships",
+      "membership_dashboard_api"
+    ],
+    [
+      "api.rest.web",
+      "rest_web"
+    ],
+    [
+      "api.rest.web.apps",
+      "api_apps"
+    ],
+    [
+      "api.rest.web.apps.comments",
+      "comment_web_api"
+    ],
+    [
+      "api.rest.web.apps.media",
+      "media_web_api"
+    ],
+    [
+      "api.rest.web.apps.media.audio",
+      "media_audio_api"
+    ],
+    [
+      "api.rest.web.apps.media.offline",
+      "media_offline_web_api"
+    ],
+    [
+      "api.rest.web.apps.media.streaming",
+      "media_streaming_web_api"
+    ],
+    [
+      "api.rest.web.apps.podcasts",
+      "podcast_web_api"
+    ],
+    [
+      "api.rest.web.apps.profile",
+      "profile_web_api"
+    ],
+    [
+      "api.rest.web.apps.queue",
+      "queue_web_api"
+    ],
+    [
+      "apps.accounts",
+      "accounts"
+    ],
+    [
+      "apps.analytics",
+      "analytics"
+    ],
+    [
+      "apps.billing",
+      "billing"
+    ],
+    [
+      "apps.category",
+      "category"
+    ],
+    [
+      "apps.comments",
+      "comments"
+    ],
+    [
+      "apps.match",
+      "match"
+    ],
+    [
+      "apps.media",
+      "media"
+    ],
+    [
+      "apps.media.audio",
+      "audio"
+    ],
+    [
+      "apps.media.chapters",
+      "chapters"
+    ],
+    [
+      "apps.media.images",
+      "images"
+    ],
+    [
+      "apps.media.offline",
+      "offline"
+    ],
+    [
+      "apps.media.transcription",
+      "transcription"
+    ],
+    [
+      "apps.media.video",
+      "video"
+    ],
+    [
+      "apps.forum",
+      "forum"
+    ],
+    [
+      "apps.posts",
+      "posts"
+    ],
+    [
+      "apps.persons",
+      "persons"
+    ],
+    [
+      "apps.region",
+      "region"
+    ],
+    [
+      "apps.posts.podcasts",
+      "podcasts"
+    ],
+    [
+      "apps.posts.polls",
+      "polls"
+    ],
+    [
+      "apps.memberships",
+      "memberships"
+    ],
+    [
+      "apps.promotions",
+      "promotions"
+    ],
+    [
+      "apps.queue",
+      "queue"
+    ],
+    [
+      "apps.recommendation",
+      "recommendation"
+    ],
+    [
+      "apps.recommendation.ml",
+      "ml"
+    ],
+    [
+      "apps.region.leagues",
+      "leagues"
+    ],
+    [
+      "apps.region.leagues.clubs",
+      "clubs"
+    ],
+    [
+      "apps.thumbnail",
+      "thumbnail"
+    ],
+    [
+      "apps.tactics",
+      "tactics"
+    ]
+  ]
+}

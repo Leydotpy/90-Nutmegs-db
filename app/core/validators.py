@@ -1,15 +1,13 @@
 import keyword
 
+from django.apps import apps
 from django.conf.urls.i18n import is_language_prefix_patterns_used
 from django.core import validators
 from django.core.exceptions import ValidationError
 from django.http import Http404
 from django.urls import get_urlconf, resolve
-from django.utils.translation import get_language, get_language_from_path
+from django.utils.translation import get_language, get_language_from_path, override
 from django.utils.translation import gettext_lazy as _
-from django.utils.translation import override
-
-from core.loading import get_model
 
 
 class ExtendedURLValidator(validators.URLValidator):
@@ -35,7 +33,7 @@ class ExtendedURLValidator(validators.URLValidator):
         except Http404:
             # We load flatpages here as it causes a circular reference problem
             # sometimes.  FlatPages is None if not installed
-            FlatPage = get_model('flatpages', 'FlatPage')
+            FlatPage = apps.get_model('flatpages', 'FlatPage')
             if FlatPage is not None:
                 try:
                     FlatPage.objects.get(url=value)

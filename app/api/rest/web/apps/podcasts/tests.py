@@ -292,8 +292,5 @@ class PublicEpisodePublicationTests(TestCase):
         response = self.client.get("/api/rest/web/apps/podcast/promotions/")
 
         self.assertEqual(response.status_code, 200)
-        banner_ids = {
-            str(item["resource_id"])
-            for item in response.data["promotions"]["banners"]
-        }
+        banner_ids = {str(item["resource_id"]) for item in response.data["promotions"]["banners"]}
         self.assertEqual(banner_ids, {str(banners[0].pk), str(banners[1].pk)})

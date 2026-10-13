@@ -1,83 +1,25 @@
-from rest_framework.permissions import BasePermission, SAFE_METHODS
-from guardian.core import ObjectPermissionChecker
+"""Local roles: active staff administer content; superusers administer commerce."""
 
-msg = f"Access denied. you do not have sufficient permission to continue"
-
-
-class CachedObjectOwnerPerm(BasePermission):
-    message = msg
-
-    def has_object_permission(self, request, view, obj):
-        checker = ObjectPermissionChecker(request.user)
-        return checker.has_perm("profile_user", obj)
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
-class ObjectOwnerPerm(BasePermission):
-    message = msg
-
-    def has_object_permission(self, request, view, obj):
-        return request.user.has_perm("profiles.profile_user", obj)
-
-
-class IsCEO(BasePermission):
-    message = msg
-    SAFE_METHODS = ['GET']
+class ActiveStaff(BasePermission):
+    message = "Active staff access is required."
 
     def has_permission(self, request, view):
         user = request.user
-        return bool(request.method in self.SAFE_METHODS or
-                    user.has_perm("profiles.c_e_o"))
+        return bool(user and user.is_authenticated and user.is_active and user.is_staff)
 
 
-class IsManager(BasePermission):
-    message = msg
-
+class StaffReadOnlyOrSuperuser(ActiveStaff):
     def has_permission(self, request, view):
-        user = request.user
-        return bool(user.has_perm("profiles.manager"))
-
-
-class IsDirector(BasePermission):
-    message = msg
-
-    def has_permission(self, request, view):
-        return bool(request.user.has_perm("profiles.director"))
-
-
-class IsSecretary(BasePermission):
-    message = msg
-
-    def has_permission(self, request, view):
-        return bool(request.user.has_perm("profiles.secretary"))
-
-
-class IsPromoter(BasePermission):
-    message = msg
-
-    def has_permission(self, request, view):
-        return request.user.has_perm("profiles.promoter")
+        return super().has_permission(request, view) and (
+            request.method in SAFE_METHODS or request.user.is_superuser
+        )
 
 
 class IsOwnerOrReadOnly(BasePermission):
-    message = msg
-
     def has_object_permission(self, request, view, obj):
-        if request.method in SAFE_METHODS:
-            return True
-        return obj.user == request.user
-
-
-class IsOwnerOrError(BasePermission):
-    message = msg
-
-    def has_object_permission(self, request, view, obj):
-        return obj.user == request.user
-
-
-class IsAdmin(BasePermission):
-    message = msg
-
-    def has_permission(self, request, view):
-        return request.user.has_perm("profiles.promoter") or request.user.has_perm(
-            "profiles.secretary") or request.user.has_perm("profiles.director") or request.user.has_perm(
-            "profiles.c_e_o")
+        return request.method in SAFE_METHODS or (
+            request.user.is_authenticated and request.user.is_active and obj.user == request.user
+        )

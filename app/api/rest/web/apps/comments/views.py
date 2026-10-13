@@ -1,11 +1,8 @@
 from rest_framework import generics, permissions
 
-from api.rest.core import get_model
+from apps.comments.models import Comment
 from api.rest.dashboard.permissions import IsOwnerOrReadOnly
-from api.rest.web.serializers.comments import *
-
-Post = get_model("posts", "Post")
-Comment = get_model("comments", "Comment")
+from api.rest.web.serializers.comments import CommentDetailSerializer, comment_create_func
 
 
 class CommentCreateAPIView(generics.CreateAPIView):

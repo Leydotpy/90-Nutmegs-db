@@ -38,6 +38,8 @@ REQUIRED_PRODUCTION_ENV = {
     "CLERK_SECRET_KEY": "production-test-clerk-secret",
     "CLERK_AUTH_PARTIES": "https://app.example.test",
     "GIFFY_SHARED_SECRET": ("production-test-giffy-secret-with-at-least-thirty-two-characters"),
+    "MAIN_PUBLIC_BASE_URL": "https://api.example.test",
+    "GIFFY_API_BASE_URL": "https://giffy.example.test",
     "CLOUDFLARE_ACCOUNT_ID": "test-account",
     "CLOUDFLARE_API_TOKEN": "test-api-token",
     "R2_ACCESS_KEY_ID": "test-r2-access",

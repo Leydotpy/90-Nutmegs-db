@@ -12,7 +12,9 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 
-from decouple import config
+from conf.task_queues import BEAT_SCHEDULE, DEFAULT_QUEUE, TASK_QUEUES, TASK_ROUTES
+
+from .environment import config, csv_values
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -29,6 +31,31 @@ SECRET_KEY = config(
 DEBUG = False
 
 ALLOWED_HOSTS = []
+
+# Keep framework and worker exceptions behind the same final-output redactor.
+# Callers must still log identifiers/outcomes instead of bodies or credentials.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "redacted": {
+            "()": "conf.logging.RedactingFormatter",
+            "format": "%(levelname)s %(name)s %(message)s",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "redacted",
+        },
+    },
+    "root": {"handlers": ["console"], "level": "INFO"},
+    "loggers": {
+        name: {"handlers": ["console"], "level": "INFO", "propagate": False}
+        for name in ("django", "django.server", "celery", "celery.task", "multiprocessing")
+    },
+}
+CELERY_WORKER_HIJACK_ROOT_LOGGER = False
 
 # Application definition
 
@@ -54,29 +81,6 @@ INSTALLED_APPS = [
     'drf_spectacular_sidecar',  # optional: swagger-ui static
     'pycflare.django',
     # Local Apps
-    # API ROUTING
-    'api.config.Api',
-    'api.rest.config.RestApiConfig',
-    # DASHBOARD API ROUTING
-    'api.rest.dashboard.config.DashboardConfig',
-    'api.rest.dashboard.apps.config.DashboardAppsConfig',
-    'api.rest.dashboard.apps.match.apps.MatchDashboardAPIConfig',
-    'api.rest.dashboard.apps.persons.apps.PersonsDashboardAPIConfig',
-    'api.rest.dashboard.apps.podcasts.apps.PodcastDashboardConfig',
-    'api.rest.dashboard.apps.promotions.apps.PromotionsDashboardConfig',
-    'api.rest.dashboard.apps.region.apps.RegionDashboardAPIConfig',
-    'api.rest.dashboard.apps.memberships.apps.MembershipDashboardConfig',
-    # WEB API ROUTING
-    'api.rest.web.config.RestApiWebConfig',
-    'api.rest.web.apps.config.ApiAppConfig',
-    'api.rest.web.apps.comments.apps.CommentWebAPIConfig',
-    'api.rest.web.apps.media.apps.MediaWebAPIConfig',
-    'api.rest.web.apps.media.audio.apps.MediaAudioAppConfig',
-    'api.rest.web.apps.media.offline.apps.MediaOfflineWebAPIConfig',
-    'api.rest.web.apps.media.streaming.apps.MediaStreamingWebAPIConfig',
-    'api.rest.web.apps.podcasts.apps.PodcastWebAPIConfig',
-    'api.rest.web.apps.profile.apps.ProfileWebAPIConfig',
-    'api.rest.web.apps.queue.apps.QueueWebAPIConfig',
     # NATIVE APPS
     "apps.accounts.apps.AccountsConfig",
     "apps.analytics.apps.AnalyticsConfig",
@@ -111,11 +115,12 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "apps.accounts.session.AnonymousSessionIdentityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "django_clerk_sdk.core.auth.clerk.middleware.ClerkMiddleware",
+    "apps.accounts.middleware.ClerkMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -208,46 +213,23 @@ CACHES = {
     }
 }
 
-# in celery beat schedule (example)
-CELERY_BEAT_SCHEDULE = {
-    "recalc-user-category-affinity-every-10-min": {
-        "task": "apps.recommendation.tasks.recalc_user_category_affinity_postgres",
-        "schedule": 24 * 3600,  # seconds
-    },
-    "expire-licenses-daily": {
-        "task": "django.core.management.call_command",
-        "schedule": 24 * 3600,
-        "args": ("expire_licenses",),
-    },
-    "rotate-cloud-front-cookies": {
-        "task": "django.core.management.call_command",
-        "schedule": 24 * 3600,
-        "args": ("rotate_cloud_front_cookies",),
-    },
-    "revoke-inactive-devices-weekly": {
-        "task": "django.core.management.call_command",
-        "schedule": 7 * 24 * 3600,
-        "args": ("revoke_inactive_devices", "--days", 90),
-    },
-    "gc-orphan-packages-daily": {
-        "task": "django.core.management.call_command",
-        "schedule": 24 * 3600,
-        "args": ("gc_orphan_packages", "--days", 30),
-    },
-}
-
+# Producers and workers share one explicit routing map. Keep the existing Celery
+# owner and historical ordinary queue; independently scale media and bulk pools.
+CELERY_IMPORTS = ("conf.tasks",)
+CELERY_TASK_DEFAULT_QUEUE = DEFAULT_QUEUE
+CELERY_TASK_QUEUES = TASK_QUEUES
+CELERY_TASK_ROUTES = TASK_ROUTES
+CELERY_TASK_CREATE_MISSING_QUEUES = False
+CELERY_BEAT_SCHEDULE = BEAT_SCHEDULE
 CELERY_TIMEZONE = "Australia/Tasmania"
 CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_SOFT_TIME_LIMIT = 29 * 60
 CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 
-# ...
-
-# Celery settings
 CELERY_BROKER_URL = config("CELERY_BROKER_URL", default="redis://127.0.0.1:6379/2")
-# CELERY_RESULT_BACKEND = config("CELERY_RESULT_BACKEND", cast=str)
-
-CELERY_RESULT_BACKEND = 'django-db'
-CELERY_CACHE_BACKEND = 'default'
+CELERY_RESULT_BACKEND = "django-db"
+CELERY_CACHE_BACKEND = "default"
 
 
 DATABASE_URL = config("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
@@ -346,11 +328,8 @@ CORS_ALLOW_METHODS = [
     'PUT',
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://localhost:8050",
-]
+CORS_ALLOWED_ORIGINS = csv_values(config("CORS_ALLOWED_ORIGINS", default=""))
+CSRF_TRUSTED_ORIGINS = csv_values(config("CSRF_TRUSTED_ORIGINS", default=""))
 
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
 SESSION_COOKIE_SAMESITE = 'lax'
@@ -364,7 +343,6 @@ PODCAST_QUEUE_SESSION_COOKIE_AGE = SESSION_COOKIE_AGE  # 30 days
 PODCAST_QUEUE_SESSION_COOKIE_SAMESITE = SESSION_COOKIE_SAMESITE  # or "None" for cross-site (see below)
 PODCAST_QUEUE_SESSION_COOKIE_DOMAIN = None  # or ".example.com" to share across subdomains
 
-DYNAMIC_CLASS_LOADER = "core.loading.default_class_loader"
 DEFAULT_SLUG_FUNCTION = "core.utils.default_slugifier"
 
 # Recently-viewed podcasts
@@ -373,11 +351,6 @@ RECENTLY_VIEWED_PODCAST_COOKIE_NAME = "podcast_history"
 RECENTLY_VIEWED_EPISODE_COOKIE_NAME = "episodes_history"
 RECENTLY_VIEWED_COOKIE_SECURE = SESSION_COOKIE_SECURE
 RECENTLY_VIEWED_ITEMS = 20
-
-# Cookies
-OSCAR_COOKIES_DELETE_ON_LOGOUT = [
-    "RECENTLY_VIEWED_ITEMS",
-]
 
 CLERK_SECRET_KEY = config("CLERK_SECRET_KEY", default="")
 CLERK_AUTH_PARTIES = tuple(

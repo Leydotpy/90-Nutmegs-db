@@ -1,3 +1,5 @@
+from api.rest.dashboard.audit import StaffAuditMixin
+from api.rest.dashboard.permissions import ActiveStaff
 # ------------------------
 # ViewSets
 # ------------------------
@@ -31,12 +33,12 @@ from .serializers import (
 )
 
 
-class PodcastViewSet(viewsets.ModelViewSet):
+class PodcastViewSet(StaffAuditMixin, viewsets.ModelViewSet):
     """
     ViewSet for Podcast. Supports listing, creating, updating Podcasts and
     prefetches analytics M2M for performance.
     """
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [ActiveStaff]
     filter_backends = [filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter]
     search_fields = ["title", "subtitle", "tags", "category__title"]
     ordering_fields = ["title", "timestamp"]
@@ -170,8 +172,8 @@ class PodcastViewSet(viewsets.ModelViewSet):
         return Response({"detail": "image deleted"}, status=status.HTTP_204_NO_CONTENT)
 
 
-class SeasonViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated, IsAdminUser]
+class SeasonViewSet(StaffAuditMixin, viewsets.ModelViewSet):
+    permission_classes = [ActiveStaff]
     serializer_class = SeasonSerializer
     filter_backends = [filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter]
     search_fields = ["title", "description", "slug", "podcast__title"]
@@ -182,8 +184,8 @@ class SeasonViewSet(viewsets.ModelViewSet):
         return Season.objects.select_related("podcast", "legacy_podcast").all()
 
 
-class EpisodeViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated, IsAdminUser]
+class EpisodeViewSet(StaffAuditMixin, viewsets.ModelViewSet):
+    permission_classes = [ActiveStaff]
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ["title", "subtitle", "tags", "hosts"]
 

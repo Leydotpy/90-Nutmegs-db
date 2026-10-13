@@ -7,7 +7,7 @@ from rest_framework.exceptions import APIException, AuthenticationFailed
 
 
 class AuthenticationServiceUnavailable(APIException):
-    """Fail a bearer request closed when its verification cache is unavailable."""
+    """Fail a bearer request closed when verification dependencies are unavailable."""
 
     status_code = 503
     default_detail = "Authentication service is temporarily unavailable."
@@ -15,12 +15,7 @@ class AuthenticationServiceUnavailable(APIException):
 
 
 class ClerkBearerAuthentication(BaseAuthentication):
-    """Load the Clerk SDK authenticator only when a request is evaluated.
-
-    The SDK imports Django user models at module import time. DRF may resolve
-    authentication classes while legacy API AppConfigs are still populating,
-    so referencing the SDK class directly raises ``AppRegistryNotReady``.
-    """
+    """Explicit bearer credentials use the canonical accounts identity boundary."""
 
     def authenticate(self, request):
         authorization = get_authorization_header(request).split()
@@ -34,9 +29,7 @@ class ClerkBearerAuthentication(BaseAuthentication):
         if not authorization or authorization[0].lower() != b"bearer":
             return None
         if len(authorization) == 1:
-            raise AuthenticationFailed(
-                "Invalid Authorization header. No bearer token provided."
-            )
+            raise AuthenticationFailed("Invalid Authorization header. No bearer token provided.")
         if len(authorization) > 2:
             raise AuthenticationFailed(
                 "Invalid Authorization header. Bearer token must not contain spaces."
@@ -46,7 +39,8 @@ class ClerkBearerAuthentication(BaseAuthentication):
         except UnicodeError as exc:
             raise AuthenticationFailed("Invalid Authorization header.") from exc
 
-        from django_clerk_sdk.core.auth.clerk.service import (
+        from apps.accounts.identity import (
+            SERVICE_UNAVAILABLE,
             USER_INACTIVE,
             resolve_clerk_auth,
         )
@@ -58,16 +52,17 @@ class ClerkBearerAuthentication(BaseAuthentication):
 
         if result.is_authenticated:
             return result.user, result.token
+        if getattr(result, "reason", None) == SERVICE_UNAVAILABLE:
+            raise AuthenticationServiceUnavailable()
         if not result.has_credentials:
             # A syntactically valid bearer header was present before the SDK
             # was called. Never let an SDK result downgrade that explicit
             # authentication attempt into cookie/session fallback.
             raise AuthenticationFailed("Invalid or expired Clerk token.")
 
-        # The SDK returns a RequestState for an ordinary rejected token. Its
-        # broad provider exception path instead returns a token/hash but no
-        # state and places the internal exception string in ``reason``. Do not
-        # expose that string or misclassify the outage as bad credentials.
+        # A missing verification state cannot establish that credentials were
+        # rejected. Preserve a sanitized outage response without exposing any
+        # provider detail or falling back to a browser session.
         if (
             getattr(result, "token", None)
             and getattr(result, "state", None) is None

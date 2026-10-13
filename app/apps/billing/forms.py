@@ -7,10 +7,8 @@ from django.core import validators
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import gettext_lazy as _
 
-from core.loading import get_model
 from . import bankcards
-
-Bankcard = get_model("billing", "Bankcard")
+from .models import Bankcard
 
 # List of card names for all the card types supported in payment.bankcards
 VALID_CARDS = set([card_type[0] for card_type in bankcards.CARD_TYPES])

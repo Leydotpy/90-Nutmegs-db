@@ -135,7 +135,9 @@ class ProcessAudioTests(TestCase):
                         self.assertFalse(os.path.exists(p),
                                          f"Tempdir {p!r} should be removed after process_audio finishes")
 
-    def test_process_audio_transcription_raises_is_logged_but_processing_continues(self):
+    def test_transcription_failure_is_logged_and_temporary_files_are_cleaned(self):
+        # SF-15 owns partial-success state semantics. Do not require the known
+        # processed=True-on-transcription-failure defect as desired behavior.
         module = self.module
         created_tmpdirs = []
         audio_id = "transcribe-fail-1"
@@ -161,16 +163,11 @@ class ProcessAudioTests(TestCase):
                         mock.patch(f"{MODULE_PATH}.generate_preview_clip", return_value=None), \
                         mock.patch(f"{MODULE_PATH}.generate_transcription",
                                    side_effect=RuntimeError("ASR provider crashed")):
-                    # Because process_audio calls logger.exception on transcription failure,
-                    # capture logs and assert that the exception was logged. The function should continue.
+                    # Preserve failure observability and cleanup independently
+                    # of the partial-success state that SF-15 must replace.
                     logger_name = module.__name__
                     with self.assertLogs(logger_name, level="ERROR") as log_cm:
-                        result = module.process_audio(audio_id)
-
-                    # The function should not raise but should return id and mark processed True
-                    self.assertEqual(result, audio_id)
-                    self.assertTrue(dummy_audio.processed,
-                                    "Even with transcription failure, audio.processed should still be set")
+                        module.process_audio(audio_id)
 
                     # the last ERROR log should contain the message "Transcription generation failed"
                     error_logs = [entry for entry in log_cm.output if

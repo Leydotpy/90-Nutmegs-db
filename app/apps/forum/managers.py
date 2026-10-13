@@ -2,10 +2,6 @@ from django.db.models import Manager, QuerySet
 from django.shortcuts import get_object_or_404
 from rest_framework.serializers import ValidationError
 
-from core.loading import get_model
-
-Reply = get_model("forum", "Reply")
-
 
 class DiscussionQueryset(QuerySet):
 
@@ -116,6 +112,8 @@ class ReplyManager(Manager):
         return ReplyQueryset(self.model, using=self._db)
 
     def reply(self, user, thread, msg=None, vid=None, aud=None, stk=None, img=None, _type="Text"):
+        from apps.forum.models import Reply
+
         obj = self.model(user=user, thread=thread, msg_type=_type)
     
         if _type == Reply.Type.IMAGE:

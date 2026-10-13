@@ -4,17 +4,21 @@ import json
 from pathlib import Path
 
 from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
-
-from core.recommender.datasets.builder import load_from_db_as_dfs
 
 
 class Command(BaseCommand):
-    help = "Export the recommendation datasets from the main app into the shared microservice directory."
+    help = "Export recommendation datasets to the configured output directory."
 
     def handle(self, *args, **options):
-        output_dir = Path(getattr(settings, "RECOMMENDER_OUTPUT_PATH"))
+        try:
+            from core.recommender.datasets.builder import load_from_db_as_dfs
+        except ImportError:
+            raise CommandError(
+                "Dataset export requires the recommendation-workers dependency extra"
+            ) from None
+        output_dir = Path(settings.RECOMMENDER_OUTPUT_PATH)
         output_dir.mkdir(parents=True, exist_ok=True)
 
         attributes_df, interactions_df, popularity_df = load_from_db_as_dfs()
@@ -44,8 +48,4 @@ class Command(BaseCommand):
             encoding="utf-8",
         )
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"Exported recommendation datasets to {output_dir}"
-            )
-        )
+        self.stdout.write(self.style.SUCCESS(f"Exported recommendation datasets to {output_dir}"))

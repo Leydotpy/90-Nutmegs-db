@@ -1,10 +1,11 @@
 """Development settings with local, non-production-safe defaults."""
 
 import dj_database_url
-from decouple import config
+from django.core.exceptions import ImproperlyConfigured
 
 from .base import *  # noqa: F401,F403
 from .base import BASE_DIR
+from .environment import config, csv_values
 
 DEBUG = config("DJANGO_DEBUG", cast=bool, default=True)
 SECRET_KEY = config(
@@ -20,12 +21,22 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
-DATABASES = {
-    "default": dj_database_url.config(
-        default=config("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
+CORS_ALLOWED_ORIGINS = csv_values(
+    config(
+        "CORS_ALLOWED_ORIGINS",
+        default="http://localhost:3000,http://localhost:5173,http://localhost:8050",
+    )
+)
+CSRF_TRUSTED_ORIGINS = csv_values(config("CSRF_TRUSTED_ORIGINS", default=""))
+
+try:
+    _database = dj_database_url.parse(
+        config("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
         conn_max_age=0,
     )
-}
+except ValueError, TypeError:
+    raise ImproperlyConfigured("DATABASE_URL must be a valid database URL") from None
+DATABASES = {"default": _database}
 
 # Development starts without a Redis dependency. A developer may opt in
 # explicitly without changing committed settings.
@@ -46,5 +57,7 @@ else:
     }
 
 SESSION_COOKIE_SECURE = False
+PODCAST_QUEUE_SESSION_COOKIE_SECURE = False
+RECENTLY_VIEWED_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 SECURE_SSL_REDIRECT = False

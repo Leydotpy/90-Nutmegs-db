@@ -13,18 +13,6 @@ class ApplicationError(Exception):
         return str(self.message)
 
 
-class ModuleNotFoundError(Exception):
-    pass
-
-
-class AppNotFoundError(Exception):
-    pass
-
-
-class ClassNotFoundError(Exception):
-    pass
-
-
 class ValidationError(ApplicationError):
     def __init__(self, message):
         self.message = message

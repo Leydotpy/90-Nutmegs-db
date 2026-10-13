@@ -1,23 +1,17 @@
 from typing import Any
 
-from django.apps import apps
-from django.contrib.contenttypes.models import ContentType
-from rest_framework import serializers
-
 from apps.memberships.models import (
     Entitlement,
     Feature,
+    Membership,
     Plan,
     PlanFeature,
-    Membership,
     Subscription,
 )
-
-from core.compat import get_user_model
+from django.contrib.contenttypes.models import ContentType
+from rest_framework import serializers
 
 from api.rest.dashboard.apps.users.serializers import ClerkUserSerializer
-
-User = get_user_model()
 
 
 # --- Feature serializers (unchanged) ---
@@ -92,11 +86,12 @@ class PlanCreateSerializer(serializers.ModelSerializer):
             return serializer.save()
         try:
             return Feature.objects.get(pk=feature_payload)
-        except Exception:
-            raise serializers.ValidationError("Invalid feature reference")
+        except Exception as exc:
+            raise serializers.ValidationError("Invalid feature reference") from exc
 
     def create(self, validated_data):
         from django.db import transaction
+
         features_payload = validated_data.pop("features", [])
         with transaction.atomic():
             plan = Plan.objects.create(**validated_data)
@@ -107,6 +102,7 @@ class PlanCreateSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         from django.db import transaction
+
         features_payload = validated_data.pop("features", None)
         for attr, val in validated_data.items():
             setattr(instance, attr, val)
@@ -121,7 +117,9 @@ class PlanCreateSerializer(serializers.ModelSerializer):
 
 
 class PlanDisplaySerializer(serializers.ModelSerializer):
-    plan_features = PlanFeatureDisplaySerializer(source="planfeature_set", many=True, read_only=True)
+    plan_features = PlanFeatureDisplaySerializer(
+        source="planfeature_set", many=True, read_only=True
+    )
     features = FeatureDisplaySerializer(many=True, read_only=True)
 
     class Meta:
@@ -138,71 +136,22 @@ class PlanDisplaySerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-# -------------------------------------------------------------------
-# Entitlement nested serialization registry + dynamic fallback
-# -------------------------------------------------------------------
+# API representations belong to the API layer, not domain AppConfig.ready().
+def _get_serializer_for_content_type(ct: ContentType) -> type[serializers.ModelSerializer] | None:
+    from api.rest.dashboard.apps.podcasts.serializers import (
+        EpisodeModelSerializer,
+        PodcastModelSerializer,
+    )
 
-# Registry mapping "app_label.model" -> serializer class
-ENTITLEMENT_SERIALIZER_REGISTRY: dict[str, type[serializers.ModelSerializer]] = {}
-
-# Example: attempt to register common models automatically (if present).
-# If your Episode/Course models live in different apps, register them manually
-# (see `register_entitlement_serializer()` below).
-try:
-    Episode = apps.get_model("episodes", "Episode")
-
-
-    class EpisodeSerializer(serializers.ModelSerializer):
-        class Meta:
-            model = Episode
-            # choose only sensible fields to avoid huge payloads; adjust as needed
-            fields = ("id", "title", "duration", "slug", "published_at")
-
-
-    ENTITLEMENT_SERIALIZER_REGISTRY["episodes.episode"] = EpisodeSerializer
-except LookupError:
-    pass
-
-try:
-    Course = apps.get_model("courses", "Course")
-
-
-    class CourseSerializer(serializers.ModelSerializer):
-        class Meta:
-            model = Course
-            fields = ("id", "title", "description", "slug", "published_at")
-
-
-    ENTITLEMENT_SERIALIZER_REGISTRY["courses.course"] = CourseSerializer
-except LookupError:
-    pass
-
-
-def register_entitlement_serializer(app_label: str, model_name: str, serializer_cls: type[serializers.ModelSerializer]):
-    """
-    Call this in startup (e.g. AppConfig.ready) or at import time to register
-    custom serializers for entitlement content objects.
-
-    Example:
-        register_entitlement_serializer("podcast", "Episode", MyEpisodeSerializer)
-    """
-    key = f"{app_label.lower()}.{model_name.lower()}"
-    ENTITLEMENT_SERIALIZER_REGISTRY[key] = serializer_cls
-
-
-def _get_serializer_for_content_type(ct: ContentType) -> type[serializers.ModelSerializer]:
-    key = f"{ct.app_label.lower()}.{ct.model.lower()}"
-    serializer_cls = ENTITLEMENT_SERIALIZER_REGISTRY.get(key)
+    serializers_by_model = {
+        "podcasts.podcast": PodcastModelSerializer,
+        "podcasts.episode": EpisodeModelSerializer,
+    }
+    serializer_cls = serializers_by_model.get(f"{ct.app_label.lower()}.{ct.model.lower()}")
     if serializer_cls:
         return serializer_cls
 
-    # fallback: build a simple ModelSerializer that exposes all fields
-    class AutoSerializer(serializers.ModelSerializer):
-        class Meta:
-            model = apps.get_model(ct.app_label, ct.model)
-            fields = "__all__"
-
-    return AutoSerializer
+    return None
 
 
 # --- Entitlement serializers ---
@@ -234,8 +183,8 @@ class EntitlementCreateSerializer(serializers.ModelSerializer):
             else:
                 ct = ContentType.objects.get(pk=val)
             return ct
-        except ContentType.DoesNotExist:
-            raise serializers.ValidationError({"content_type": "invalid content type"})
+        except ContentType.DoesNotExist as exc:
+            raise serializers.ValidationError({"content_type": "invalid content type"}) from exc
 
     def validate(self, attrs):
         ct_val = attrs.pop("content_type")
@@ -253,16 +202,15 @@ class EntitlementDisplaySerializer(serializers.ModelSerializer):
         return f"{obj.content_type.app_label}.{obj.content_type.model}"
 
     def get_content_object_data(self, obj):
-        try:
-            serializer_cls = _get_serializer_for_content_type(obj.content_type)
-            serializer = serializer_cls(obj.content_object, context=self.context)
-            return serializer.data
-        except Exception:
-            # fallback to string representation if any step fails
-            try:
-                return {"display": str(obj.content_object)}
-            except Exception:
-                return None
+        serializer_cls = _get_serializer_for_content_type(obj.content_type)
+        if serializer_cls is None:
+            # Unknown generic targets may contain passwords, keys or private
+            # metadata. Do not even fetch them to build a display string.
+            return {"id": str(obj.object_id)}
+        content = obj.content_object
+        if content is None:
+            return None
+        return serializer_cls(content, context=self.context).data
 
     class Meta:
         model = Entitlement

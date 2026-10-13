@@ -44,14 +44,14 @@ class ClerkAuthenticationConfigurationTests(SimpleTestCase):
         self.assertIs(classes[0], ClerkBearerAuthentication)
         self.assertEqual(classes[1].__name__, "SessionAuthentication")
 
-    @mock.patch("django_clerk_sdk.core.auth.clerk.service.resolve_clerk_auth")
+    @mock.patch("apps.accounts.identity.resolve_clerk_auth")
     def test_request_without_credentials_falls_through(self, resolve):
         result = self.authentication.authenticate(self.factory.get("/"))
 
         self.assertIsNone(result)
         resolve.assert_not_called()
 
-    @mock.patch("django_clerk_sdk.core.auth.clerk.service.resolve_clerk_auth")
+    @mock.patch("apps.accounts.identity.resolve_clerk_auth")
     def test_cookie_only_credentials_fall_through_without_clerk_resolution(self, resolve):
         request = self.factory.post(
             "/",
@@ -65,7 +65,7 @@ class ClerkAuthenticationConfigurationTests(SimpleTestCase):
         self.assertIsNone(result)
         resolve.assert_not_called()
 
-    @mock.patch("django_clerk_sdk.core.auth.clerk.service.resolve_clerk_auth")
+    @mock.patch("apps.accounts.identity.resolve_clerk_auth")
     def test_explicit_bearer_cannot_downgrade_to_session_fallback(self, resolve):
         resolve.return_value = SimpleNamespace(
             is_authenticated=False,
@@ -87,7 +87,7 @@ class ClerkAuthenticationConfigurationTests(SimpleTestCase):
 
         resolve.assert_called_once_with(request)
 
-    @mock.patch("django_clerk_sdk.core.auth.clerk.service.resolve_clerk_auth")
+    @mock.patch("apps.accounts.identity.resolve_clerk_auth")
     def test_non_bearer_authorization_falls_through(self, resolve):
         request = self.factory.get(
             "/",
@@ -99,7 +99,7 @@ class ClerkAuthenticationConfigurationTests(SimpleTestCase):
         self.assertIsNone(result)
         resolve.assert_not_called()
 
-    @mock.patch("django_clerk_sdk.core.auth.clerk.service.resolve_clerk_auth")
+    @mock.patch("apps.accounts.identity.resolve_clerk_auth")
     def test_malformed_bearer_authorization_fails_before_resolution(self, resolve):
         malformed_headers = (
             "Bearer",
@@ -117,7 +117,7 @@ class ClerkAuthenticationConfigurationTests(SimpleTestCase):
 
         resolve.assert_not_called()
 
-    @mock.patch("django_clerk_sdk.core.auth.clerk.service.resolve_clerk_auth")
+    @mock.patch("apps.accounts.identity.resolve_clerk_auth")
     def test_invalid_bearer_credentials_do_not_fall_back_to_session(self, resolve):
         resolve.return_value = SimpleNamespace(
             is_authenticated=False,
@@ -135,7 +135,7 @@ class ClerkAuthenticationConfigurationTests(SimpleTestCase):
             self.authentication.authenticate(request)
 
     @mock.patch(
-        "django_clerk_sdk.core.auth.clerk.service.resolve_clerk_auth",
+        "apps.accounts.identity.resolve_clerk_auth",
         side_effect=RedisConnectionError("cache unavailable"),
     )
     def test_bearer_cache_outage_fails_closed_as_unavailable(self, _authenticate):
@@ -144,7 +144,7 @@ class ClerkAuthenticationConfigurationTests(SimpleTestCase):
         with self.assertRaises(AuthenticationServiceUnavailable):
             self.authentication.authenticate(request)
 
-    @mock.patch("django_clerk_sdk.core.auth.clerk.service.resolve_clerk_auth")
+    @mock.patch("apps.accounts.identity.resolve_clerk_auth")
     def test_provider_failure_is_sanitized_as_unavailable(self, resolve):
         resolve.return_value = SimpleNamespace(
             is_authenticated=False,
@@ -163,7 +163,7 @@ class ClerkAuthenticationConfigurationTests(SimpleTestCase):
 
         self.assertNotIn("internal-host", str(raised.exception.detail))
 
-    @mock.patch("django_clerk_sdk.core.auth.clerk.service.resolve_clerk_auth")
+    @mock.patch("apps.accounts.identity.resolve_clerk_auth")
     def test_verified_bearer_result_is_delegated(self, resolve):
         user = SimpleNamespace(is_authenticated=True)
         resolve.return_value = SimpleNamespace(
@@ -183,7 +183,7 @@ class ClerkAuthenticationConfigurationTests(SimpleTestCase):
 @override_settings(ROOT_URLCONF=__name__)
 @modify_settings(
     MIDDLEWARE={
-        "remove": "django_clerk_sdk.core.auth.clerk.middleware.ClerkMiddleware",
+        "remove": "apps.accounts.middleware.ClerkMiddleware",
     }
 )
 class ClerkSessionCsrfCompatibilityTests(TestCase):
@@ -201,7 +201,7 @@ class ClerkSessionCsrfCompatibilityTests(TestCase):
         self.client.force_login(self.user)
         self.client.cookies["__session"] = "cookie-only-clerk-token"
 
-    @mock.patch("django_clerk_sdk.core.auth.clerk.service.resolve_clerk_auth")
+    @mock.patch("apps.accounts.identity.resolve_clerk_auth")
     def test_cookie_request_preserves_session_authentication_fallback(self, resolve):
         response = self.client.get("/session-probe/")
 
@@ -209,7 +209,7 @@ class ClerkSessionCsrfCompatibilityTests(TestCase):
         self.assertEqual(response.json(), {"username": "listener"})
         resolve.assert_not_called()
 
-    @mock.patch("django_clerk_sdk.core.auth.clerk.service.resolve_clerk_auth")
+    @mock.patch("apps.accounts.identity.resolve_clerk_auth")
     def test_unsafe_cookie_request_is_rejected_by_session_csrf_check(self, resolve):
         response = self.client.post(
             "/session-probe/",
@@ -232,8 +232,8 @@ class ClerkMiddlewareCsrfCompatibilityTests(TestCase):
             clerk_user_id="user_clerk_cookie_csrf_test",
         )
 
-    @mock.patch("django_clerk_sdk.core.auth.clerk.service.resolve_clerk_auth")
-    @mock.patch("django_clerk_sdk.core.auth.clerk.middleware.resolve_clerk_auth")
+    @mock.patch("apps.accounts.identity.resolve_clerk_auth")
+    @mock.patch("apps.accounts.middleware.resolve_clerk_auth")
     def test_clerk_cookie_authenticated_post_still_requires_csrf(
         self,
         middleware_resolve,
