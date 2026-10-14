@@ -378,11 +378,32 @@ class Season(models.Model):
 
     def clean(self):
         super().clean()
-        if self.podcast_id and (
-            self.podcast.parent_id is not None
-            or self.podcast.structure == Podcast.Structure.CHILD
-        ):
-            raise ValidationError({"podcast": "A Season must belong to a root Podcast."})
+        if self.podcast_id:
+            self.validate_content_identity(podcast=self.podcast, slug=self.slug)
+
+    def validate_content_identity(self, *, podcast, slug):
+        """Validate operator edits without separating a Season from its graph.
+
+        Direct canonical edits keep the owner and public slug stable. Legacy
+        child moves use the explicit atomic bridge service, which moves the
+        child, Season and Episodes together rather than validating a lone row.
+        """
+
+        errors = {}
+        if podcast.parent_id is not None or podcast.structure == Podcast.Structure.CHILD:
+            errors["podcast"] = "A Season must belong to a root Podcast."
+
+        previous = Season.objects.filter(pk=self.pk).values("podcast_id", "slug").first()
+        if previous is not None:
+            if previous["podcast_id"] != podcast.pk:
+                errors["podcast"] = (
+                    "A Season's Podcast cannot be changed directly. "
+                    "Move legacy seasons through their child Podcast so Episodes move with them."
+                )
+            if previous["slug"] != str(slug):
+                errors["slug"] = "A Season's public slug cannot be changed after creation."
+        if errors:
+            raise ValidationError(errors)
 
     def get_episodes(self) -> QuerySet[Episode]:
         return self.episodes.all()
@@ -551,10 +572,6 @@ class Episode(AbstractAnalytics):
     @property
     def category_qs(self) -> QuerySet[Category]:
         return Category.objects.filter(Q(episodes=self) | Q(podcasts=self.podcast)).distinct()
-
-    def get_highest_plan_in_categories(self) -> Plan | None:
-        category = self.category_qs.select_related("tier").order_by("-tier__tier").first()
-        return category.tier if category else None
 
     @property
     def audio(self):

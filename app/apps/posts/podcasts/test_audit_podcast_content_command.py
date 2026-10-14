@@ -120,7 +120,9 @@ class AuditPodcastContentCommandTests(TestCase):
                 "legacy_children_with_invalid_parent": 0,
                 "nonchild_podcasts_with_parent": 0,
                 "published_episodes_with_undiscoverable_podcast": 3,
+                "published_plan_episodes_missing_required_plan": 0,
                 "published_podcasts_missing_published_at": 1,
+                "seasons_with_nonroot_podcast": 0,
             },
         )
         self.assertEqual(payload["drift_count"], 8)
@@ -174,3 +176,22 @@ class AuditPodcastContentCommandTests(TestCase):
         self.assertEqual(payload["counts"]["legacy_children_missing_parent"], 1)
         self.assertEqual(payload["counts"]["legacy_children_with_invalid_parent"], 1)
         self.assertEqual(payload["counts"]["nonchild_podcasts_with_parent"], 1)
+
+    def test_orphan_child_ownership_and_missing_explicit_plan_are_reported(self):
+        orphan = Podcast.objects.create(title="Orphan child", structure=BasePost.Structure.CHILD)
+        season = Season.objects.create(podcast=orphan, title="Invalid owner", position=1)
+        Episode.objects.create(podcast=orphan, season=season, title="Orphan-owned episode")
+        published = self.create_published_podcast("Canonical plan show")
+        Episode.objects.create(
+            podcast=published,
+            title="Missing plan",
+            status=Episode.PublicationStatus.PUBLISHED,
+            visibility=Episode.Visibility.PLAN,
+        )
+
+        payload = self.run_command()
+
+        self.assertEqual(payload["counts"]["episodes_owned_by_legacy_child"], 1)
+        self.assertEqual(payload["counts"]["seasons_with_nonroot_podcast"], 1)
+        self.assertEqual(payload["counts"]["published_plan_episodes_missing_required_plan"], 1)
+        self.assertEqual(season.podcast, orphan)

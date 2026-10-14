@@ -279,13 +279,13 @@ class EpisodeDashboardPublicationCompatibilityTests(TestCase):
         self.category = Category.objects.create(name="Dashboard gate", tier=self.fan)
         self.release_at = timezone.now() + datetime.timedelta(hours=1)
 
-    def test_legacy_dashboard_write_populates_canonical_fields(self):
+    def test_legacy_public_write_populates_canonical_fields_without_category_plan(self):
         serializer = EpisodeSerializer(
             data={
                 "podcast": str(self.podcast.pk),
                 "title": "Legacy dashboard episode",
                 "public_release_date": self.release_at.isoformat(),
-                "exclusive": True,
+                "exclusive": False,
                 "categories": [str(self.category.pk)],
             }
         )
@@ -294,10 +294,10 @@ class EpisodeDashboardPublicationCompatibilityTests(TestCase):
         episode = serializer.save()
 
         self.assertEqual(episode.status, Episode.PublicationStatus.PUBLISHED)
-        self.assertEqual(episode.visibility, Episode.Visibility.PLAN)
+        self.assertEqual(episode.visibility, Episode.Visibility.PUBLIC)
         self.assertEqual(episode.premium_available_at, self.release_at)
-        self.assertIsNone(episode.public_available_at)
-        self.assertEqual(episode.required_plan, self.fan)
+        self.assertEqual(episode.public_available_at, self.release_at)
+        self.assertIsNone(episode.required_plan)
 
     def test_canonical_dashboard_write_keeps_a_legacy_projection(self):
         serializer = EpisodeSerializer(
@@ -363,23 +363,21 @@ class EpisodeDashboardPublicationCompatibilityTests(TestCase):
         self.assertIsNone(updated.required_plan)
         self.assertEqual(updated.public_available_at, self.release_at)
 
-    def test_legacy_exclusive_free_category_uses_lowest_paid_plan(self):
-        serializer = EpisodeSerializer(
-            data={
-                "podcast": str(self.podcast.pk),
-                "title": "Free-tagged legacy exclusive episode",
-                "public_release_date": self.release_at.isoformat(),
-                "exclusive": True,
-                "categories": [str(self.free_category.pk)],
-            }
-        )
-
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        episode = serializer.save()
-
-        self.assertEqual(episode.visibility, Episode.Visibility.PLAN)
-        self.assertIsNone(episode.public_available_at)
-        self.assertEqual(episode.required_plan, self.fan)
+    def test_legacy_exclusive_create_requires_explicit_canonical_access(self):
+        for category in (self.free_category, self.category):
+            with self.subTest(category=category.name):
+                serializer = EpisodeSerializer(
+                    data={
+                        "podcast": str(self.podcast.pk),
+                        "title": "Ambiguous legacy exclusive episode",
+                        "public_release_date": self.release_at.isoformat(),
+                        "exclusive": True,
+                        "categories": [str(category.pk)],
+                    }
+                )
+                self.assertFalse(serializer.is_valid())
+                self.assertIn("required_plan", serializer.errors)
+        self.assertFalse(Episode.objects.filter(podcast=self.podcast).exists())
 
     def test_unrepresentable_canonical_window_projects_fail_closed(self):
         serializer = EpisodeSerializer(
@@ -406,14 +404,14 @@ class EpisodeDashboardPublicationCompatibilityTests(TestCase):
             partial=True,
         )
 
-        self.assertTrue(legacy_round_trip.is_valid(), legacy_round_trip.errors)
-        round_tripped = legacy_round_trip.save()
+        self.assertFalse(legacy_round_trip.is_valid())
+        self.assertIn("required_plan", legacy_round_trip.errors)
+        episode.refresh_from_db()
+        self.assertEqual(episode.visibility, Episode.Visibility.PUBLIC)
+        self.assertIsNone(episode.public_available_at)
+        self.assertIsNone(episode.required_plan)
 
-        self.assertEqual(round_tripped.visibility, Episode.Visibility.PLAN)
-        self.assertIsNone(round_tripped.public_available_at)
-        self.assertEqual(round_tripped.required_plan, self.fan)
-
-    def test_legacy_release_only_update_preserves_explicit_required_plan(self):
+    def test_legacy_release_and_taxonomy_update_preserves_explicit_required_plan(self):
         episode = Episode.objects.create(
             podcast=self.podcast,
             title="Explicit pro policy",
@@ -428,6 +426,7 @@ class EpisodeDashboardPublicationCompatibilityTests(TestCase):
             data={
                 "public_release_date": later_release.isoformat(),
                 "exclusive": True,
+                "categories": [str(self.free_category.pk)],
             },
             partial=True,
         )

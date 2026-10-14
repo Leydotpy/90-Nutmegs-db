@@ -1,12 +1,11 @@
+from django.db.models.signals import pre_save
 from django.dispatch import receiver
-from django.db.models.signals import pre_save, post_save
-from apps.region.leagues.models import League
 from utils.utils import generate_code
 
-from apps.thumbnail.utils import ThumbnailGenerator
+from apps.region.leagues.models import League
 
 
 @receiver(pre_save, sender=League)
-def league_code_generate_fn(sender, instance, **kwargs):  # NOQA
-    if not instance.code:
-        instance.code = int(generate_code(4, klass=instance.__class__))
+def league_code_generate_fn(sender, instance, raw=False, using=None, **kwargs):
+    if not raw and instance.code is None:
+        instance.code = int(generate_code(4, klass=sender, using=using))

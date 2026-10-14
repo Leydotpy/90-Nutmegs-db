@@ -1,25 +1,28 @@
 import random
 import string
-from typing import TypeVar
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import QuerySet
 
 
-T = TypeVar('T', bound=models.Model)
+def generate_code(_range=24, klass=None, *, using=None):
+    """Choose an unused display code, with bounded retries on collisions.
 
-
-def generate_code(_range=24, klass=None):
-    code = "".join(random.choice(string.digits) for x in range(_range))
-    if klass is not None:
-        if klass.objects.filter(code=code).exists():
-            generate_code(_range, klass)
-    return code
+    Database uniqueness remains authoritative if concurrent writers choose the
+    same candidate; callers must retry the failed write rather than reuse it.
+    """
+    for _ in range(100):
+        code = "".join(random.choice(string.digits) for _ in range(_range))
+        if klass is None or not klass._default_manager.db_manager(using).filter(code=code).exists():
+            return code
+    raise ValidationError("Could not allocate an unused code; retry the operation.")
 
 
 def regen_id(_range=40):
-    chars = string.ascii_uppercase+string.ascii_lowercase+string.digits
-    return str().join(random.choice(chars) for _ in range(_range))
+    chars = string.ascii_uppercase + string.ascii_lowercase + string.digits
+    return "".join(random.choice(chars) for _ in range(_range))
+
 
 def format_duration(duration: float) -> str:
     hours, remainder = divmod(duration, 3600)
@@ -37,16 +40,13 @@ def format_duration(duration: float) -> str:
 
     return ":".join(parts)
 
+
 def get_client_ip(request):
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        ip = x_forwarded_for.split(',')[0]
-    else:
-        ip = request.META.get('REMOTE_ADDR')
-    return ip
+    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+    return x_forwarded_for.split(",")[0] if x_forwarded_for else request.META.get("REMOTE_ADDR")
 
 
-def get_random(qs: QuerySet[T]) -> T | None:
+def get_random[T: models.Model](qs: QuerySet[T]) -> T | None:
     count = qs.count()
     if count > 0:
         return qs.all()[random.randint(0, count - 1)]

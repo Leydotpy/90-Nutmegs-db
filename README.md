@@ -27,6 +27,7 @@ Read [configuration and secret handling](docs/configuration.md) before selecting
 - [Runtime processes](docs/runtime.md) — web/worker/scheduler commands, queue rollout and shutdown budgets.
 - [Identity and authorization](docs/identity-and-authorization.md) — canonical Clerk mapping, staff access, privacy and audit contracts.
 - [API structure](docs/api-structure.md) — URL includes, feature ownership and compatibility verification.
+- [Content canonicalization](docs/content-canonicalization.md) — ownership, taxonomy, sports metadata and migration compatibility.
 - [Dependencies](docs/dependencies.md) — install profiles, supported runtime, audit results and upgrade procedure.
 - [Execution ledger](SANFOOTBALL_IMPLEMENTATION_STATUS.md) — sole concern tracker and risk/action record.
 

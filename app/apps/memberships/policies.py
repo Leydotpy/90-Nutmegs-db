@@ -2,8 +2,8 @@
 
 This module is the single owner of episode access rules.  Existing model and
 service helpers may delegate here during migration, but must not reproduce the
-decision tree. Category tiers are consulted only by the one-time migration and
-legacy dashboard compatibility service; live authorization reads the Episode's
+decision tree. Category tiers are consulted only by the historical migration;
+live authorization reads the Episode's
 explicit canonical fields.
 """
 

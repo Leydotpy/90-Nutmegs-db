@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db.models import F, Q
 from django.utils import timezone
 
-from apps.posts.podcasts.models import Episode, Podcast
+from apps.posts.podcasts.models import Episode, Podcast, Season
 
 
 class Command(BaseCommand):
@@ -47,7 +47,10 @@ class Command(BaseCommand):
             .filter(parent__isnull=False)
             .count(),
             "episodes_owned_by_legacy_child": Episode.objects.filter(
-                podcast__parent__isnull=False
+                Q(podcast__parent__isnull=False) | Q(podcast__structure=Podcast.Structure.CHILD)
+            ).count(),
+            "seasons_with_nonroot_podcast": Season.objects.filter(
+                Q(podcast__parent__isnull=False) | Q(podcast__structure=Podcast.Structure.CHILD)
             ).count(),
             "episode_season_podcast_mismatches": Episode.objects.filter(season__isnull=False)
             .exclude(season__podcast_id=F("podcast_id"))
@@ -61,6 +64,11 @@ class Command(BaseCommand):
             )
             .exclude(podcast_id__in=discoverable_podcast_ids)
             .count(),
+            "published_plan_episodes_missing_required_plan": Episode.objects.filter(
+                status=Episode.PublicationStatus.PUBLISHED,
+                visibility=Episode.Visibility.PLAN,
+                required_plan__isnull=True,
+            ).count(),
         }
         drift_count = sum(counts.values())
         payload = {

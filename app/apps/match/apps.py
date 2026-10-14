@@ -8,3 +8,6 @@ class MatchConfig(AppConfig):
     label = "match"
     verbose_name = _("Match")
     verbose_name_plural = _("Matches")
+
+    def ready(self):
+        from apps.match import signals  # noqa: F401

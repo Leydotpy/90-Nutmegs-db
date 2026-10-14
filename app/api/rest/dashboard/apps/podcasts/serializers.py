@@ -383,13 +383,30 @@ class SeasonSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         attrs = super().validate(attrs)
         podcast = attrs.get("podcast", getattr(self.instance, "podcast", None))
-        if podcast is not None and (
-            podcast.parent_id is not None or podcast.structure == Podcast.Structure.CHILD
-        ):
-            raise serializers.ValidationError(
-                {"podcast": "A Season must belong to a root Podcast."}
-            )
+        if podcast is not None:
+            season = self.instance or Season()
+            try:
+                season.validate_content_identity(
+                    podcast=podcast,
+                    slug=attrs.get("slug", season.slug),
+                )
+            except DjangoValidationError as exc:
+                raise serializers.ValidationError(exc.message_dict) from exc
         return attrs
+
+    def update(self, instance, validated_data):
+        # A legacy child move locks this same Season. Refresh under that lock
+        # so a stale metadata form cannot restore the old Podcast owner.
+        with transaction.atomic():
+            current = Season.objects.select_for_update().get(pk=instance.pk)
+            try:
+                current.validate_content_identity(
+                    podcast=validated_data.get("podcast", current.podcast),
+                    slug=validated_data.get("slug", current.slug),
+                )
+            except DjangoValidationError as exc:
+                raise serializers.ValidationError(exc.message_dict) from exc
+            return super().update(current, validated_data)
 
 
 class EpisodeSerializer(serializers.ModelSerializer):
@@ -491,6 +508,23 @@ class EpisodeSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
+        canonical_write = bool(
+            (CANONICAL_EPISODE_ACCESS_FIELDS - {"preview_duration_seconds"}) & attrs.keys()
+        )
+        legacy_write = self.instance is None or bool(LEGACY_EPISODE_ACCESS_FIELDS & attrs.keys())
+        if not canonical_write and legacy_write:
+            exclusive = attrs.get("exclusive", getattr(self.instance, "exclusive", False))
+            plan_id = getattr(self.instance, "required_plan_id", None)
+            visibility = getattr(self.instance, "visibility", Episode.Visibility.PUBLIC)
+            if exclusive and plan_id is None and visibility != Episode.Visibility.ENTITLEMENT:
+                raise serializers.ValidationError(
+                    {
+                        "required_plan": (
+                            "Use canonical visibility, required_plan and release fields "
+                            "for exclusive content."
+                        )
+                    }
+                )
         podcast, season = self._owner_values(attrs)
         if podcast is None:
             return attrs
@@ -627,10 +661,7 @@ class EpisodeSerializer(serializers.ModelSerializer):
             if canonical_write:
                 synchronize_episode_legacy_projection(instance)
             elif legacy_write:
-                synchronize_episode_access_from_legacy(
-                    instance,
-                    derive_required_plan=categories is not None,
-                )
+                synchronize_episode_access_from_legacy(instance)
 
             if new_images_data:
                 for img_payload in new_images_data:

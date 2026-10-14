@@ -4,11 +4,11 @@
 
 ## Current Master Phase
 
-Master Phase 4 — SF-00 through SF-05 approved; SF-06 is the only newly eligible concern.
+Master Phase 5 — SF-00 through SF-06 approved; SF-07, SF-10, SF-16 and SF-17 are newly READY.
 
 ## Current Subphase
 
-SF-03/SF-04/SF-05 approvals recorded. SF-06 READY; preparing the approved SF-00–SF-05 GitHub checkpoint before SF-06 implementation.
+SF-06 human approval recorded 2026-10-14. Publishing the approved SF-00–SF-06 checkpoint on `codex/approved-sf00-sf06`, then implementing the newly READY set sequentially on a separate local branch.
 
 ## Concern Execution Board
 
@@ -22,18 +22,18 @@ Allowed statuses: `NOT_STARTED` · `READY` · `IN_PROGRESS` · `BLOCKED` · `REA
 | SF-03 | Dependency, Runtime & Process Isolation | SF-02 | `APPROVED` | User approval in this chat, 2026-10-13 | Human reviewed and approved; recorded by Codex at user direction. Validation caveats remain in review packet. |
 | SF-04 | Legacy Framework & API Structure Removal | SF-01, SF-02 | `APPROVED` | User approval in this chat, 2026-10-13 | Human reviewed and approved; recorded by Codex at user direction. Validation caveats remain in review packet. |
 | SF-05 | Identity, Authentication & Authorization Foundation | SF-01, SF-02 | `APPROVED` | User approval in this chat, 2026-10-13 | Human reviewed and approved; recorded by Codex at user direction. Validation caveats remain in review packet. |
-| SF-06 | Podcast Content & Sports Metadata Canonicalization | SF-04 | `READY` | — | Dependencies approved; authorized by user to implement all currently READY concerns. |
-| SF-07 | Plan, Price, Subscription & Entitlement Models | SF-05, SF-06 | `NOT_STARTED` | — | — |
+| SF-06 | Podcast Content & Sports Metadata Canonicalization | SF-04 | `APPROVED` | User approval in this chat, 2026-10-14 | Human reviewed and approved SF-06; recorded by Codex at user direction. Review packet and rollout limits retained. |
+| SF-07 | Plan, Price, Subscription & Entitlement Models | SF-05, SF-06 | `READY` | — | Dependencies approved; user authorizes implementation of all newly READY concerns. |
 | SF-08 | Canonical Access Policy | SF-07 | `NOT_STARTED` | — | — |
 | SF-09 | Billing Provider & Webhook Lifecycle | SF-08 | `NOT_STARTED` | — | — |
-| SF-10 | Playback Progress & Continue Listening | SF-05, SF-06 | `NOT_STARTED` | — | — |
+| SF-10 | Playback Progress & Continue Listening | SF-05, SF-06 | `READY` | — | Dependencies approved; user authorizes implementation of all newly READY concerns. |
 | SF-11 | Queue / Up Next Rewrite | SF-10 | `NOT_STARTED` | — | — |
 | SF-12 | Library: Follows, Playlists & Bookmarks | SF-10, SF-11 | `NOT_STARTED` | — | — |
 | SF-13 | Media Asset Model & Cloudflare Provider Boundary | SF-03, SF-06, SF-08 | `NOT_STARTED` | — | — |
 | SF-14 | Direct Upload, Protected Delivery & Media Lifecycle | SF-13, SF-08 | `NOT_STARTED` | — | — |
 | SF-15 | Transcription, Chapters, Summaries & AI Baseline | SF-13 | `NOT_STARTED` | — | — |
-| SF-16 | Community & Moderation | SF-05, SF-06 | `NOT_STARTED` | — | — |
-| SF-17 | Analytics Events & Transactional Publication | SF-05, SF-06 | `NOT_STARTED` | — | — |
+| SF-16 | Community & Moderation | SF-05, SF-06 | `READY` | — | Dependencies approved; user authorizes implementation of all newly READY concerns. |
+| SF-17 | Analytics Events & Transactional Publication | SF-05, SF-06 | `READY` | — | Dependencies approved; user authorizes implementation of all newly READY concerns. |
 | SF-18 | Discovery, Search, Recommendation & Editorial | SF-06, SF-12, SF-17 | `NOT_STARTED` | — | — |
 | SF-19 | Offline / Downloads & Legacy DRM De-risking | SF-08, SF-14 | `NOT_STARTED` | — | — |
 | SF-20 | Core Refactor Hardening Gate | SF-02, SF-03, SF-04, SF-05, SF-06, SF-07, SF-08, SF-09, SF-10, SF-11, SF-12, SF-13, SF-14, SF-15, SF-16, SF-17, SF-18, SF-19 | `NOT_STARTED` | — | — |
@@ -310,6 +310,54 @@ docs/testing.md
 
 - **Exact deleted file:** `app/api/rest/dashboard/utils.py`.
 
+### SF-06 review packet (2026-10-14)
+
+- **Concern/status:** SF-06 — Podcast Content & Sports Metadata Canonicalization; READY_FOR_REVIEW, not approved. Only SF-06 became READY after the user's SF-03/SF-04/SF-05 approvals. Their exact review note is recorded below. Approved SF-00–SF-05 commit `7ba8eba69b3eb027cd4f1b1f60f3dc50c5f997bb` was pushed to [codex/approved-sf00-sf05](https://github.com/Leydotpy/90-Nutmegs-db/tree/codex/approved-sf00-sf05), and the remote SHA was verified. [Download approved code](https://github.com/Leydotpy/90-Nutmegs-db/archive/refs/heads/codex/approved-sf00-sf05.zip). SF-06 is a separate local, uncommitted patch on `codex/sf06-content-canonicalization`.
+- **Implemented:** removed live category-to-plan derivation and implicit cheapest-paid-plan assignment; made category tiers optional historical metadata, read-only in dashboard/admin, and safe from plan CASCADE deletion. Preserved existing IDs/slugs and changed only new category slug inputs. Canonical Season owner/slug edits are rejected; dashboard updates revalidate a fresh locked row so stale metadata cannot undo a legacy-child graph move. Fixed sports code creation/retry/raw-import behavior for Region/Country/League/Team and registered the existing Match structure initializer with locking, replay reuse and raw-load protection. Extended the read-only content drift audit and added migration/API/transaction tests, documentation and CI scopes.
+- **Owners/design:** retain `podcasts.Podcast/Season/Episode` and their tables, canonical release/visibility fields, existing AccessPolicy and existing structured Region/Country/League/Team/Player/Match relations. No second commercial/content/sports system. Existing canonical season expansion, root/child bridge, stable public route handling, deterministic artwork and historical slug reconciliation are VERIFIED EXISTING. One new schema expansion; no provider/domain package move or later concern implementation. Design/rollout: [content-canonicalization.md](docs/content-canonicalization.md).
+- **Migrations/backfills:** new `category.0003_alter_category_slug_alter_category_tier` depends on `podcasts.0003`, changes `tier` to nullable SET_NULL and future slug generation, and preserves current associations/identifiers/access fields. Existing podcast 0002/0003 historical backfills remain unchanged and are verified by migration/reapply tests. No production/persistent database was modified; deployed apply-state and data still require restored-copy verification. Do not rerun historical data functions on current editorial rows. Reverse category schema requires explicit reconciliation of NULL tiers; do not invent plans or delete categories to satisfy the former NOT NULL constraint. Historical duplicate-slug repair is not losslessly reversible. Retain backup and identifier comparison evidence before rollout.
+- **API/client compatibility:** routes, model IDs and existing slugs remain stable. Categories can be created without plans; historical `tier` is still returned (possibly null), but writes are ignored as read-only. New/ambiguous legacy exclusive requests without an existing explicit plan return a field validation error directing clients to canonical visibility/plan/release inputs; no silent category-derived or cheapest-plan grant. Legacy public release writes and existing explicit-plan/entitlement-only bridges remain. Direct Season owner/slug changes now return validation errors; legacy-child moves remain the explicit atomic graph transition. Avoid mixed old/new staff writers during cutover. Child rows and legacy release/tier projections are retained until deployed data/client verification permits contraction.
+- **Tests/checks actually run:** focused `python app/manage.py test apps.posts.podcasts apps.category apps.region apps.match api.rest.dashboard.apps.podcasts api.rest.web.apps.podcasts --settings=conf.settings.test` **PASS**, 83 tests (12.847s). Full `coverage run app/manage.py test --settings=conf.settings.test --verbosity=1` **PASS**, 407 tests (46.349s), 66% coverage; report threshold and XML **PASS**. All 16 local workflow commands **PASS**: installed dependency graph, compile, 125-file formatting, scoped Ruff lint, six-file mypy, Django checks, synthetic production deploy check, model/migration drift, OpenAPI, both locked dependency exports/audits, complete suite and coverage outputs. Same dependency lock now passes both web and worker audits; immutable VCS pycflare is skipped by pip-audit. OpenAPI retains 84 warnings (45 unique), zero errors. Separate changed-model Ruff comparison **PASS**, zero old/new findings. An exploratory category-directory lint included four old historical-migration findings; those unchanged files are excluded from the scoped workflow and were not rewritten. Initial new-test import ordering was corrected before final checks.
+- **Evidence/verification limits:** logs/results under `/workspace/.sf-evidence/sf06/checks`, focused log `/workspace/.sf-evidence/sf06/focused.log`; workflow commands use writable caches and local-socket/network permission for audits/Gunicorn tests. Python 3.14.8 was restored after the managed environment restarted. No real provider, PostgreSQL contention/load, live deployment, database backup/restore or production data audit has been run. The targeted read-only peer review found no blocking regression. Final whitespace, dependency eligibility and immutable-spec checks are recorded in the quality table.
+- **Queries/performance/concurrency:** category edits no longer query categories/plans to infer access. Season metadata updates take a row lock and revalidate current identity; the legacy bridge retains its existing parent/Season locks. Match initialization uses the existing one-to-one Event, one Match row lock and bounded inserts; replay preserves recorded possession. Code candidates retry at most 100 times; DB uniqueness remains authoritative for concurrent Region/Country/League/Team writes. SQLite proves rollback/replay and historical migrations, not PostgreSQL contention. Existing broader content read/N+1 optimizations remain SF-18; no unbounded new read path is introduced.
+- **Security/privacy/entitlements:** explicit Episode fields and the canonical policy remain authoritative. Taxonomy changes and historical category-plan deletion cannot change an explicit Episode plan. Ambiguous legacy exclusive writes fail validation; no implicit access widening. Entitlement-only legacy round-trips retain their restriction. Existing staff/audit authorization and protected-media boundaries are preserved; no new sensitive payload/log/identifier exposure.
+- **Operations/infrastructure/provider/queue/storage/backup/cost:** no new service, provider call, task, queue or media storage topology. Content audit adds orphan-child owner, nonroot Season owner and published PLAN-without-plan counts; `--fail-on-drift` returns nonzero after JSON output. It never mutates data. Normal Match creation adds the already-intended structural rows; API/admin transactions include these writes. Standalone ORM callers must wrap Match creation in an outer atomic block for all-or-nothing creation. Old/raw-import Matches are not backfilled with invented score state. Operational rollout/rollback and audit steps are documented; no production cost/load claims.
+- **Legacy removed:** live `Episode.get_highest_plan_in_categories`, the category-derivation switch and implicit fallback plan selection; recursive Region save and unnecessary Country post-insert update; broken recursive collision retry; dormant non-idempotent Match initializer body. No historical migration, URL, content row, table, legacy child bridge or compatibility data deleted.
+- **Risks/deferred:** real target data/restore/locks need deployment verification; tierless categories prevent an unprepared schema rollback; raw/bulk ORM edits bypass operator validation; concurrent admin graph edits need operational care. Old Matches lacking Event and existing team-edit/partial Match update defects remain sports followup (SF-35/SF-40), not a live-feature implementation here. Existing Player post-save raw/zero-code handling remains a separate ingestion edge for SF-35; its identity/relations were preserved. Master provenance mismatch remains the recorded human/source-authority issue. The earlier SF-05 PyPI audit outage is resolved by this run, without changing its historical result.
+- **Reviewer verification:** (1) download/test the approved GitHub checkpoint independently; (2) review the exact SF-06 files below and the content guide on this local branch; (3) run the focused command, full suite and workflow gates; (4) on a restored disposable target DB, capture IDs/slugs, inspect migration plan, apply the category expansion, run `audit_podcast_content --fail-on-drift`, and compare canonical owner/access/sports links and old URLs; (5) verify taxonomy edits never alter Episode access, ambiguous legacy exclusive inputs are rejected, Season owner/slug edits fail, and the legacy move carries Episodes; (6) explicitly approve or return SF-06. Only human approval unlocks more work.
+- **Recommended next after approval:** SF-07 — Plan, Price, Subscription & Entitlement Models. Actual graph eligibility after SF-06 approval will be SF-07, SF-10, SF-16 and SF-17; SF-13 still needs SF-08, SF-18 still needs SF-12/SF-17, and SF-20 needs its remaining dependencies. No later concern has begun.
+- **Exact changed/added files (27, relative to approved `7ba8eba`):**
+
+```text
+.github/workflows/backend.yml
+README.md
+SANFOOTBALL_IMPLEMENTATION_STATUS.md
+app/api/rest/dashboard/apps/category/serializers.py
+app/api/rest/dashboard/apps/podcasts/serializers.py
+app/api/rest/dashboard/apps/podcasts/tests.py
+app/apps/category/admin.py
+app/apps/category/migrations/0003_alter_category_slug_alter_category_tier.py
+app/apps/category/models.py
+app/apps/category/test_migrations.py
+app/apps/category/tests.py
+app/apps/match/apps.py
+app/apps/match/services.py
+app/apps/match/signals.py
+app/apps/match/tests.py
+app/apps/memberships/policies.py
+app/apps/posts/podcasts/management/commands/audit_podcast_content.py
+app/apps/posts/podcasts/models.py
+app/apps/posts/podcasts/services.py
+app/apps/posts/podcasts/test_audit_podcast_content_command.py
+app/apps/posts/podcasts/test_content_ownership.py
+app/apps/region/leagues/clubs/receivers.py
+app/apps/region/leagues/receivers.py
+app/apps/region/receivers.py
+app/apps/region/tests.py
+app/utils/utils.py
+docs/content-canonicalization.md
+```
+
 ## Verified Existing Implementations
 
 Verification is limited to cited source/constraints and the exercised tests; it does not approve the owning concern or certify complete master compliance.
@@ -319,7 +367,7 @@ Verification is limited to cited source/constraints and the exercised tests; it 
 | Explicit settings and startup guards | Existing settings tests; test check and synthetic production deploy check succeed | 45 schema warnings; live configuration unverified; SF-02 |
 | Clerk bearer/session boundary, unique external-ID constraint and user projection | Existing behavior reused by SF-05; expanded real signed-token, DB uniqueness and privacy tests pass | Actual tenant/provider/PostgreSQL operational verification still required |
 | Structured AccessPolicy and exact media capability binding | Membership/media tests pass; streaming/offline call policy | Cached compatibility paths remain; SF-08 |
-| Podcast/Season/Episode canonical expansion and legacy bridges | Content/publication/API/audit-command and historical migration tests pass | Legacy child/release projections remain; SF-06 |
+| Podcast/Season/Episode canonical expansion and legacy bridges | SF-06 verifies existing migration/URL/ownership behavior, 83 focused tests and full 407-test suite | Compatibility data retained pending deployed-data/client verification |
 | Canonical media tables and Cloudflare adapter primitives | Constraints, provider/upload/finalization/delivery tests and six-file mypy check pass | No runtime API callers for new services found; no real provider/cutover verification; SF-13/SF-14 |
 | Playback bounds/identity and queue compatibility behavior | Existing progress/queue/merge tests pass | No PostgreSQL concurrency proof or complete canonical rewrite; SF-10/SF-11 |
 | Billing transition locks and card obfuscation | Existing transition/refund/cancellation/ledger tests pass | Not provider/webhook fulfillment; SF-09 |
@@ -329,7 +377,11 @@ Verification is limited to cited source/constraints and the exercised tests; it 
 
 ## In Progress
 
-The approved SF-00–SF-05 checkpoint is being committed/published at user direction. SF-06 is selected next; designs below retain historical evidence.
+None. SF-06 reached READY_FOR_REVIEW on 2026-10-14; the following start/design notes are retained as history.
+
+SF-06 started 2026-10-13 on `codex/sf06-content-canonicalization`, HEAD `7ba8eba`, clean worktree. SF-04 dependency APPROVED; all 46 graph rows checked and only SF-06 eligible. Approved code is pushed to [GitHub](https://github.com/Leydotpy/90-Nutmegs-db/tree/codex/approved-sf00-sf05); SF-06 remains separate and unapproved.
+
+SF-06 initial design: retain canonical `podcasts.Podcast/Season/Episode`, explicit release fields, existing season migration/legacy URL bridges and structured sports owners. Characterize remaining category-to-plan derivation and metadata creation hooks, then remove live category commercial coupling with explicit content access input and safe schema expansion. Preserve historical migrations/public IDs; verify backfill and expose drift through the existing content audit. Repair only concrete sports metadata creation defects within SF-06. Commercial policy redesign remains SF-07/SF-08; advanced football/live features remain later concerns. Caller design: keep `Category.tier` nullable/read-only as a historical projection (`SET_NULL` on plan deletion), omit it from new slug generation, and keep historical migrations frozen. Remove live category-to-plan derivation and implicit paid-plan selection. Legacy public release inputs remain supported; ambiguous exclusive writes without an explicit existing plan require canonical visibility/plan/release inputs, preventing silent access widening. Legacy updates preserve existing explicit plans and entitlement-only protection. Keep direct Season owner/slug immutable after creation; refresh under a row lock on dashboard metadata updates to preserve concurrent legacy moves. Historical child bridges remain until deployed data/client verification permits removal. Historic designs below are retained as evidence.
 
 User-approved SF-01/SF-02 recorded before implementation. All 46 dependencies were recomputed at selection: SF-03, SF-04, SF-05 became READY. That set was executed sequentially on `work`, preserving the reviewed working tree; subagents split tasks within the active concern only. Each new implementation ends at READY_FOR_REVIEW, without self-approval. SF-06 onward remain NOT_STARTED until their actual dependencies are approved. Start snapshot: `/tmp/sf03-start/hashes.json`, branch `work`, HEAD `e24ff2e`; existing 26 changed/untracked paths preserved.
 
@@ -345,7 +397,7 @@ SF-05 design/start: retain AUTH_USER_MODEL and its existing unique Clerk-ID colu
 
 ## Deferred
 
-No concern is marked `DEFERRED`. The findings below are intentionally left for their existing owning concerns outside the current authorized READY set (SF-03/SF-04/SF-05); all later concerns remain `NOT_STARTED`. No hidden TODO implementation is introduced.
+No concern is marked `DEFERRED`. SF-06 is complete for review; adjacent findings remain assigned to their later owners and all SF-07+ concerns remain `NOT_STARTED` until dependencies are human-approved.
 
 ## Blocked
 
@@ -355,7 +407,7 @@ No SF-00 inventory dependency is blocked. Existing failing checks are characteri
 
 - SF-04 removed the Oscar framework and migrated all runtime callers; see its exact deletion manifest above.
 - Membership plan/price coupling, Subscription `active` + `status`, legacy billing/card ledger and dormant entitlement helpers that reference absent `granted_by_purchase` and `Plan.slug` fields (SF-07/SF-09).
-- Child-Podcast/parent/structure and release/exclusive/category-plan compatibility projections (SF-06/SF-08).
+- Child-Podcast/parent/structure and release/exclusive/historical-category-tier projections remain for verified migration compatibility; live category commercial derivation removed in SF-06. Later contraction requires deployed data/client evidence (SF-08/SF-20).
 - `PlayBack` in podcasts with anonymous IP identity; QueueItem `position` + `order`; PlayList and free subscriber M2Ms mixed into media/analytics (SF-10/SF-11/SF-12).
 - Legacy Audio/Image/Video FileFields, boto3/S3/CloudFront code, local thumbnail/metadata paths, AWS/KMS custom offline packaging and Channels consumer (SF-13/SF-14/SF-19).
 - Forum Discussion/Reply alongside routed generic Comment; no complete moderation owner (SF-16).
@@ -371,6 +423,7 @@ No SF-00 inventory dependency is blocked. Existing failing checks are characteri
 | SF-00 | SF-00 | None created/applied to persistent DB | Documentation revert only | Application/migration files preserved |
 | SF-01 / SF-02 | SF-01 / SF-02 | No migrations/backfills | Test-only rollback for SF-01; coordinated code/config rollback for SF-02 | Full suite and model-drift check pass |
 | SF-03 / SF-04 / SF-05 | SF-03 / SF-04 / SF-05 | No migrations/backfills; no persistent DB changed | Deploy complete artifacts; security rollback caveats in packets | Migration drift and full suites pass |
+| New category 0003 taxonomy expansion | SF-06 | Added and tested on disposable test DB; no persistent migration | Reverse requires reconciling NULL tier values; prefer forward repair/verified restore | Historical ID/slug/M2M/access preservation test passes |
 | Existing podcasts 0002 publication/access | SF-06/SF-08 | On disk; deployed apply-state unknown | Reverse data operation noop | Existing migration tests pass |
 | Existing podcasts 0003 canonical seasons | SF-06 | On disk; deployed apply-state unknown | Reverse restores legacy child episode ownership; slug repair not losslessly undone | Historical graph/collision/reapply tests pass |
 | Existing media 0002 asset/location/variant | SF-13 | On disk; no provider cutover verified | Schema rollback would remove new tables/data; do not infer production safety | Drift check and constraint tests pass |
@@ -391,7 +444,8 @@ No SF-00 inventory dependency is blocked. Existing failing checks are characteri
 |---|---|---|---|
 | Current routes, action maps and admin/model identities | SF-04 / SF-05 | Historical SF-04 fixture preserved; explicit SF-05 permission and router-class delta | Current 381-test suite passes; no route deprecation |
 | Identity and dashboard privacy/access | SF-05 | Bearer/session order retained; unique verified ID mapping; active-staff/superuser rules and safe projections | Intentional security restrictions; no unsafe legacy alias |
-| Legacy child-Podcast routes and canonical Episode owner | SF-06 | Keep bridge services and legacy projections | Data reconciliation + client review |
+| Legacy child-Podcast routes and canonical Episode owner | SF-06 | Keep bridge services/projections; direct Season owner/slug immutable | Data reconciliation + client review |
+| Category tier and legacy exclusive writes | SF-06 | Tier optional/read-only; explicit access inputs required for ambiguous exclusive writes | Update staff clients; avoid mixed-version writes |
 | Episode publication/exclusive/category-plan fields | SF-08 | Policy plus explicit legacy synchronizers remain | Verify all serializers/admin/callers before contracting |
 | Queue ordering and login merge | SF-11 | Preserve current explicit routes and dual fields | DB/caller/concurrency migration evidence |
 | FileField audio/CloudFront and offline endpoints | SF-13/SF-14/SF-19 | Preserve protected legacy behavior and disable gates | Object/provider/client cutover evidence |
@@ -510,6 +564,10 @@ SF-00 rows refer to unchanged application commit `e24ff2e`, 2026-10-11. SF-01/SF
 | SF-05 | Current locked web audit | PASS | same | No known vulnerabilities; immutable VCS dependency skipped |
 | SF-05 | Current locked worker audit retries | INCONCLUSIVE | same | PyPI timeout then 503; same lock passed SF-04; retry before release |
 
+| SF-06 | Focused content/taxonomy/sports/API/migration suite; complete coverage suite | PASS | 2026-10-14 / 7ba8eba + local SF-06 patch | 83 focused; 407 full, 66% coverage; 26 additional tests |
+| SF-06 | All 16 workflow commands, including both locked dependency audits | PASS | same | 125-file formatting, scoped lint, six-file mypy, startup, drift, schema and coverage; VCS dependency skipped by audit |
+| SF-06 | Final diff whitespace, 46-row dependency recomputation, specification preservation and changed-model lint | PASS | same | No downstream eligible concerns; master remains unchanged; exact approved remote SHA verified |
+
 ## ADRs
 
 | ADR | Concern | Status | Summary |
@@ -531,7 +589,10 @@ SF-00 rows refer to unchanged application commit `e24ff2e`, 2026-10-11. SF-01/SF
 | R2 finalization can leave pending reservation after external promotion failure | SF-14 | Interrupted-attempt recovery and idempotency verification |
 | Audio retry/storage overwrites, repeated transcription billing, quota races and processed-on-partial-failure state | SF-15 | Explicit attempt/status/idempotency and charging tests |
 | SF-03 fixes beat targets/routes; inherited cadence labels/timezones still require deployment review | SF-19/SF-21 | Inspect maintenance effects/cadence and migrate any persisted beat state deliberately |
-| Match receiver defined but not imported; Region pre-save calls save before normal insert | SF-06 | Sports create/import characterization before changes |
+| Match receiver registration, Region insert recursion and sports code collision retry | SF-06 | Fixed; creation/raw/replay/rollback/structured relationship tests pass |
+| Old Matches may lack Events; existing Match team edits do not reconcile possession-team references; partial updates expect both teams | SF-35/SF-40 | Inspect existing/imported data and define score/team transition semantics; do not fabricate historical score state |
+| Existing Player receiver creates Fitness on raw saves and replaces a supplied zero code | SF-35 | Characterize player ingestion/fixtures before changing that lifecycle; existing IDs/relations unchanged here |
+| Raw/bulk content writes and concurrent admin graph edits can bypass dashboard freshness checks | SF-20 / operations | Use explicit services, content drift audit and PostgreSQL concurrency review before production cutover |
 | Dormant event framework and post-commit publication without durable outbox | SF-17 | Explicit event ownership and retry-safe publication |
 | Promotion byte upload synchronous; callback updates have no row lock/version ordering | SF-18 | Provider/update ordering and throughput characterization |
 | Schema warnings remain; SF-04 removed all live custom loaders | Feature owners / SF-20 | Resolve serializer/schema warnings within each feature contract; 45 unique warnings, zero errors |
@@ -544,7 +605,7 @@ SF-00 rows refer to unchanged application commit `e24ff2e`, 2026-10-11. SF-01/SF
 | Existing orphan-package GC swallows storage-delete failures then deletes the DB row | SF-19 | Staging review before schedule activation; define retry/retention/data reconciliation semantics |
 | Task hard limits do not establish FFmpeg descendant cleanup or temporary disk bounds; dormant ML matrix module trains at import | SF-15/SF-18/SF-21 | Bound subprocess/disk lifecycle in media owner; remove/converge dormant training only after caller/data review |
 | Plan create response tries to iterate a related manager as ListField data | SF-07 | Repair create/display serializer boundary; SF-05 audit transaction now rolls back failed responses |
-| Worker audit currently receives upstream PyPI timeout/503; same lock passed SF-04 | Reviewer / release gate | Retry full worker audit before release; do not call latest attempt PASS |
+| SF-05 worker audit encountered upstream PyPI timeout/503; lock unchanged | Resolved verification in SF-06 | Both locked web/worker audits now PASS (2026-10-14); preserve historical result |
 | Existing SESSION_SAVE_EVERY_REQUEST causes session DB writes when health probes send cookies | SF-21 / SF-27 | Operational probes should omit cookies; evaluate middleware isolation in deployment hardening |
 | Per-request Clerk/JWKS verification and staff audit growth not measured in deployment | SF-24 / SF-27 | Verify provider revocation, pre-auth abuse controls, network budget and audit retention/capacity |
 
@@ -563,13 +624,15 @@ SF-00 rows refer to unchanged application commit `e24ff2e`, 2026-10-11. SF-01/SF
 | SF-03 | `READY_FOR_REVIEW` | Human review pending; prepared by Codex | 2026-10-12 / e24ff2e + SF-03 patch | Runtime/dependency work complete and validated; no approval granted. |
 | SF-04 | `READY_FOR_REVIEW` | Human review pending; prepared by Codex | 2026-10-12 / e24ff2e + SF-04 patch | Framework removal and compatibility checks complete; no approval granted. |
 | SF-05 | `READY_FOR_REVIEW` | Human review pending; prepared by Codex | 2026-10-13 / e24ff2e + SF-05 patch | Identity/staff/privacy/login implementation complete; 381 tests pass. Current worker audit inconclusive due PyPI 503; unchanged lock passed SF-04. No approval granted. |
-
 | SF-03 | `APPROVED` | User, explicitly in this chat; recorded by Codex | 2026-10-13 / reviewed SF-00–SF-05 working tree | Review note: "I have reviewed SF-03, SF-04, and SF-05 and approve it." User authorizes implementation of all newly READY concerns and committing/publishing approved changes to GitHub for testing. |
 | SF-04 | `APPROVED` | User, explicitly in this chat; recorded by Codex | 2026-10-13 / reviewed SF-00–SF-05 working tree | Review note: "I have reviewed SF-03, SF-04, and SF-05 and approve it." User authorizes implementation of all newly READY concerns and committing/publishing approved changes to GitHub for testing. |
 | SF-05 | `APPROVED` | User, explicitly in this chat; recorded by Codex | 2026-10-13 / reviewed SF-00–SF-05 working tree | Review note: "I have reviewed SF-03, SF-04, and SF-05 and approve it." User authorizes implementation of all newly READY concerns and committing/publishing approved changes to GitHub for testing. |
+| SF-06 | `READY_FOR_REVIEW` | Human review pending; prepared by Codex | 2026-10-14 / approved 7ba8eba + separate local SF-06 patch | 407 tests, all workflow gates and both audits PASS; no approval granted. |
+
+| SF-06 | `APPROVED` | User, explicitly in this chat; recorded by Codex | 2026-10-14 / reviewed SF-06 working-tree patch | Review note: "I have reviewed SF-06 and approve it." User authorizes implementation of all newly READY concerns and publishing approved uncommitted changes to GitHub for testing. |
 
 ## Next Actions
 
-1. Commit and publish the approved SF-00–SF-05 checkpoint on `codex/approved-sf00-sf05` for user testing. Preserve validation caveats, including the latest worker audit's upstream PyPI failure.
-2. All 46 dependency rows recomputed after human approvals: only SF-06 is READY. Implement SF-06 and stop at READY_FOR_REVIEW; no self-approval.
-3. SF-07 and later remain gated by unapproved dependencies. Keep SF-06 implementation separate from the approved GitHub checkpoint.
+1. Publish the human-approved SF-00–SF-06 code on `codex/approved-sf00-sf06` for user testing; preserve the earlier SF-00–SF-05 checkpoint.
+2. All 46 dependency rows recomputed: newly READY set is SF-07, SF-10, SF-16 and SF-17. User explicitly requested all; execute sequentially, one active concern at a time, each ending READY_FOR_REVIEW without self-approval. Keep new implementation separate from the approved GitHub checkpoint.
+3. SF-08/SF-11 and all other dependents remain gated until their prerequisites receive human approval. Do not use READY_FOR_REVIEW to unlock them.

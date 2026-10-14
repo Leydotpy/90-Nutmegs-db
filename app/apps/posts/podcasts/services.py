@@ -8,8 +8,6 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Max, Q
 
-from apps.memberships.models import Plan
-
 if TYPE_CHECKING:
     from .models import Episode
 
@@ -33,12 +31,8 @@ LEGACY_EPISODE_ACCESS_FIELDS = frozenset(
 )
 
 
-def synchronize_episode_access_from_legacy(
-    episode: Episode,
-    *,
-    derive_required_plan: bool = True,
-) -> Episode:
-    """Map legacy release/category inputs into the canonical access fields.
+def synchronize_episode_access_from_legacy(episode: Episode) -> Episode:
+    """Map legacy release inputs without inferring access from taxonomy.
 
     This exists only so older dashboard clients remain safe during the migration.
     New code must write the canonical fields directly. Undated legacy rows are kept
@@ -48,15 +42,23 @@ def synchronize_episode_access_from_legacy(
 
     from .models import Episode
 
-    required_plan = (
-        episode.get_highest_plan_in_categories() if derive_required_plan else episode.required_plan
-    )
-    if episode.exclusive and (required_plan is None or required_plan.tier <= Plan.Level.FREE):
-        required_plan = Plan.objects.filter(tier__gt=Plan.Level.FREE).order_by("tier", "pk").first()
+    if (
+        episode.exclusive
+        and episode.required_plan_id is None
+        and episode.visibility != Episode.Visibility.ENTITLEMENT
+    ):
+        raise ValidationError(
+            {
+                "required_plan": (
+                    "Use canonical visibility, required_plan and release fields "
+                    "for exclusive content."
+                )
+            }
+        )
 
     release_at = episode.public_release_date
     values: dict[str, object] = {
-        "required_plan": required_plan,
+        "required_plan": episode.required_plan,
         "status": (
             Episode.PublicationStatus.PUBLISHED
             if release_at is not None

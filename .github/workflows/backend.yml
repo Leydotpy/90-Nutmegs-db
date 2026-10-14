@@ -50,6 +50,23 @@ jobs:
           app/apps/memberships/tests.py
           app/apps/posts/podcasts/migrations/0002_episode_publication_access.py
           app/apps/posts/podcasts/services.py
+          app/apps/posts/podcasts/test_content_ownership.py
+          app/apps/posts/podcasts/management/commands/audit_podcast_content.py
+          app/apps/posts/podcasts/test_audit_podcast_content_command.py
+          app/apps/category/models.py
+          app/apps/category/admin.py
+          app/apps/category/migrations/0003_alter_category_slug_alter_category_tier.py
+          app/apps/category/tests.py
+          app/apps/category/test_migrations.py
+          app/api/rest/dashboard/apps/category/serializers.py
+          app/apps/match/signals.py
+          app/apps/match/services.py
+          app/apps/match/tests.py
+          app/apps/region/receivers.py
+          app/apps/region/tests.py
+          app/apps/region/leagues/receivers.py
+          app/apps/region/leagues/clubs/receivers.py
+          app/utils/utils.py
           app/apps/posts/podcasts/test_publication_migration.py
           app/apps/posts/podcasts/tests.py
           app/apps/queue/tests.py
@@ -158,6 +175,23 @@ jobs:
           app/apps/memberships/tests.py
           app/apps/posts/podcasts/migrations/0002_episode_publication_access.py
           app/apps/posts/podcasts/services.py
+          app/apps/posts/podcasts/test_content_ownership.py
+          app/apps/posts/podcasts/management/commands/audit_podcast_content.py
+          app/apps/posts/podcasts/test_audit_podcast_content_command.py
+          app/apps/category/models.py
+          app/apps/category/admin.py
+          app/apps/category/migrations/0003_alter_category_slug_alter_category_tier.py
+          app/apps/category/tests.py
+          app/apps/category/test_migrations.py
+          app/api/rest/dashboard/apps/category/serializers.py
+          app/apps/match/signals.py
+          app/apps/match/services.py
+          app/apps/match/tests.py
+          app/apps/region/receivers.py
+          app/apps/region/tests.py
+          app/apps/region/leagues/receivers.py
+          app/apps/region/leagues/clubs/receivers.py
+          app/utils/utils.py
           app/apps/posts/podcasts/test_publication_migration.py
           app/apps/posts/podcasts/tests.py
           app/apps/queue/tests.py
